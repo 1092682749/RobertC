@@ -1,11 +1,67 @@
 // Day4_socket.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
+#define WIN32_LEAN_AND_MEAN
 
+#ifndef UNICODE
+#define UNICODE
+#endif
+
+#include <windows.h>
 #include "pch.h"
 #include <iostream>
 #include <WS2tcpip.h>
-#include <WinSock2.h>
+#include <Winsock2.h>
+#include <rpc.h>
+#include <ntdsapi.h>
+#include <stdio.h>
+#include <tchar.h>
+#include <mstcpip.h>
 #pragma comment(lib, "Ws2_32.lib")
+// link with fwpuclnt.lib for Winsock secure socket extensions
+#pragma comment(lib, "fwpuclnt.lib")
+
+// link with ntdsapi.lib for DsMakeSpn function
+#pragma comment(lib, "ntdsapi.lib")
+
+#define RECV_DATA_BUF_SIZE 256
+
+int SecureTcpConnect(IN const struct sockaddr *serverAddr,
+	IN ULONG serverAddrLen,
+	IN const wchar_t *serverSPN,
+	IN const SOCKET_SECURITY_SETTINGS *securitySettings,
+	IN ULONG settingsLen)
+{
+	int iResult = 0;
+	int sockErr = 0;
+	SOCKET sock = INVALID_SOCKET;
+	WSABUF wsaBuf = { 0 };
+	char const *dataBuf = "12345678";
+	DWORD  bytesSent = 0;
+	char recvBuf[RECV_DATA_BUF_SIZE] = { 0 };
+	DWORD bytesRecvd = 0;
+	DWORD flags = 0;
+	SOCKET_PEER_TARGET_NAME *peerTargetName = NULL;
+	DWORD serverSpnStringLen = (DWORD)wcslen(serverSPN);
+	DWORD peerTargetNameLen = sizeof(SOCKET_PEER_TARGET_NAME) +
+		(serverSpnStringLen * sizeof(wchar_t));
+	sock = WSASocket(serverAddr->sa_family, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0);
+	if (sock == INVALID_SOCKET)
+	{
+		iResult = WSAGetLastError();
+		wprintf(L"WSASocket returned errot %ld\n", iResult);
+		goto cleanup;
+	}
+cleanup:
+	if (sock != INVALID_SOCKET)
+	{
+		closesocket(sock);
+	}
+	if (peerTargetName)
+	{
+		HeapFree(GetProcessHeap(), 0, peerTargetName);
+	}
+	return iResult;
+}
 int main()
 {
 	SOCKET ServeSocket, s2;
