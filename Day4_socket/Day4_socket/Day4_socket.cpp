@@ -35,7 +35,8 @@ int SecureTcpConnect(IN const struct sockaddr *serverAddr,
 	int sockErr = 0;
 	SOCKET sock = INVALID_SOCKET;
 	WSABUF wsaBuf = { 0 };
-	char const *dataBuf = "12345678";
+	char cs[] = { '1', '2', '3', '4', '5', '6', '7', '8' };
+	char *dataBuf = cs;
 	DWORD  bytesSent = 0;
 	char recvBuf[RECV_DATA_BUF_SIZE] = { 0 };
 	DWORD bytesRecvd = 0;
@@ -51,6 +52,50 @@ int SecureTcpConnect(IN const struct sockaddr *serverAddr,
 		wprintf(L"WSASocket returned errot %ld\n", iResult);
 		goto cleanup;
 	}
+	sockErr = WSASetSocketSecurity(sock, securitySettings, settingsLen, NULL, NULL);
+	if (sockErr == SOCKET_ERROR)
+	{
+		iResult == WSAGetLastError();
+		wprintf(L"WSASetSocketSecurity returned error %ld\n", iResult);
+		goto cleanup;
+	}
+	peerTargetName = (SOCKET_PEER_TARGET_NAME*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, peerTargetNameLen);
+	if (!peerTargetName)
+	{
+		iResult = ERROR_NOT_ENOUGH_MEMORY;
+		wprintf(L"Out of memory\n");
+		goto cleanup;
+	}
+	peerTargetName->SecurityProtocol = securitySettings->SecurityProtocol;
+	peerTargetName->PeerTargetNameStringLen = serverSpnStringLen;
+	RtlCopyMemory((BYTE*)peerTargetName->AllStrings, (BYTE*)serverSPN, serverSpnStringLen * sizeof(wchar_t));
+	sockErr = WSASetSocketPeerTargetName(sock, peerTargetName, peerTargetNameLen, NULL, NULL);
+	if (sockErr == SOCKET_ERROR)
+		iResult = WSAGetLastError(); {
+		wprintf(L"WSAConnect returned error %ld\n", iResult);
+		goto cleanup;
+	}
+	wprintf(L"Awcure connetion established to the server\n");
+	wsaBuf.len = (ULONG)strlen(dataBuf);
+	wsaBuf.buf = dataBuf;
+	sockErr = WSASend(sock, &wsaBuf, 1, &bytesSent, 0, NULL, NULL);
+	if (sockErr == SOCKET_ERROR)
+	{
+		iResult = WSAGetLastError();
+		wprintf(L"WSASend returned error %ld\n", iResult);
+		goto cleanup;
+	}
+	wprintf(L"Send %d bytes of data to the server\n", bytesSent);
+	wsaBuf.len = RECV_DATA_BUF_SIZE;
+	wsaBuf.buf = recvBuf;
+	sockErr = WSARecv(sock, &wsaBuf, 1 & bytesRecvd, &flags, NULL, NULL);
+	if (sockErr == SOCKET_ERROR)
+	{
+		iResult = WSAGetLastError();
+		wprintf(L"WSARecv returned error %ld\n", iResult);
+		goto cleanup;
+	}
+	wprintf(L"Received %d bytes of data from the server\n", bytesRecvd);
 cleanup:
 	if (sock != INVALID_SOCKET)
 	{

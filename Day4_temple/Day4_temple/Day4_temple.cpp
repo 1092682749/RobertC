@@ -73,6 +73,10 @@ int a2[] = { 10, 20, 30 };
 int *pBased; // 非静态局部变量不能再__based规范中使用
 int main()
 {
+
+	char a[] = "hello";
+	cout << a << endl;
+
 	// 显示告诉编译器把pBased用作基指针，声明基于指针的指针pb
 		// 这里我们初始化基指针的偏移量为0
 	int __based(pBased)*pb = 0;
