@@ -1,21 +1,50 @@
-// WinINet_1.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
-#include "pch.h"
+﻿#include "pch.h"
+#include <windows.h>
 #include <iostream>
+   //Comment this line to user wininet.
+#ifdef USE_WINHTTP
+    #include <winhttp.h>
+    #pragma comment(lib, "winhttp.lib")
+#else
+    #include <wininet.h>
+    #pragma comment(lib, "wininet.lib")
+#endif
+
+
+
+
 
 int main()
 {
+	DWORD statusCode, size;
+	char *outBuffer = NULL;
+	HINTERNET hInternetRoot;
+	hInternetRoot = InternetOpen(TEXT("WinInet Example"),
+		INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
+	HINTERNET hConnect = InternetConnect(hInternetRoot, L"dyzhello.club", 80,
+		NULL, NULL, NULL, NULL, NULL);
+	LPCWSTR type = L"text/html";
+	HINTERNET request = HttpOpenRequest(hConnect, L"GET", L"/articleList", NULL, L"www.baidu.com", &type, INTERNET_FLAG_SECURE, 0);
+	BOOL success = HttpSendRequest(request, NULL, NULL, NULL,
+		0);
+	if (success)
+	{
+		HttpQueryInfo(request, HTTP_QUERY_STATUS_CODE | HTTP_QUERY_FLAG_NUMBER,
+			&statusCode, &size, NULL);
+		if (statusCode == 200)
+		{
+			InternetQueryDataAvailable(request, &size, 0, 0);
+			if (size > 0)
+			{
+				DWORD readNumber;
+				outBuffer = (char*)malloc(size);
+				memset(outBuffer, 0, size);
+				InternetReadFile(request, (LPVOID)outBuffer,
+					size, &readNumber);
+				std::cout << "读取的字节数为：" << readNumber << std::endl;
+				std::cout << "content is: \n" << outBuffer << std::endl;
+			}
+		}
+	}
     std::cout << "Hello World!\n"; 
 }
-
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
