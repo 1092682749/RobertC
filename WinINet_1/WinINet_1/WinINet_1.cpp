@@ -16,21 +16,24 @@
 
 int main()
 {
-	DWORD statusCode, size;
-	char *outBuffer = NULL;
+	DWORD statusCode = 200, size = 0;
+	LPCSTR outBuffer = NULL;
 	HINTERNET hInternetRoot;
 	hInternetRoot = InternetOpen(TEXT("WinInet Example"),
 		INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
-	HINTERNET hConnect = InternetConnect(hInternetRoot, L"dyzhello.club", 80,
-		NULL, NULL, NULL, NULL, NULL);
-	LPCWSTR type = L"text/html";
-	HINTERNET request = HttpOpenRequest(hConnect, L"GET", L"/articleList", NULL, L"www.baidu.com", &type, INTERNET_FLAG_SECURE, 0);
-	BOOL success = HttpSendRequest(request, NULL, NULL, NULL,
-		0);
+	HINTERNET hConnect = InternetConnect(hInternetRoot, L"wuxia.duowan.com", 80,
+		NULL, NULL, INTERNET_SERVICE_HTTP, NULL, NULL);
+	LPCWSTR type = L"text/*";
+	HINTERNET request = HttpOpenRequest(hConnect, L"GET", L"/1902/413722262060.html", NULL, L"", NULL, 0, 0);
+	BOOL success = HttpSendRequest(request, NULL, 0, NULL, 0);
 	if (success)
 	{
 		HttpQueryInfo(request, HTTP_QUERY_STATUS_CODE | HTTP_QUERY_FLAG_NUMBER,
 			&statusCode, &size, NULL);
+		HttpQueryInfo(request, HTTP_QUERY_RAW_HEADERS_CRLF, (LPVOID)outBuffer, &size, NULL);
+		outBuffer = new char[size];
+		HttpQueryInfo(request, HTTP_QUERY_RAW_HEADERS_CRLF, (LPVOID)outBuffer, &size, NULL);
+		std::cout << outBuffer;
 		if (statusCode == 200)
 		{
 			InternetQueryDataAvailable(request, &size, 0, 0);
@@ -38,7 +41,7 @@ int main()
 			{
 				DWORD readNumber;
 				outBuffer = (char*)malloc(size);
-				memset(outBuffer, 0, size);
+				memset((void *)outBuffer, 0, size);
 				InternetReadFile(request, (LPVOID)outBuffer,
 					size, &readNumber);
 				std::cout << "读取的字节数为：" << readNumber << std::endl;
@@ -46,5 +49,6 @@ int main()
 			}
 		}
 	}
+	
     std::cout << "Hello World!\n"; 
 }
