@@ -1,21 +1,50 @@
-// Changing_Environment_Variables.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
 
 #include "pch.h"
+#include <Windows.h>
+#include <strsafe.h>
 #include <iostream>
 
-int main()
+#define BUFSIZE 4096
+
+int main(int argc, char* argv[])
 {
-    std::cout << "Hello World!\n"; 
+	TCHAR chNewEnv[BUFSIZ];
+	LPTSTR lpszCurrentVariable;
+	DWORD dwFlags = 0;
+	TCHAR szAppName[] = TEXT("C:/Users/i-robert/source/repos/Changing_Environment_Variables_3/Debug/Changing_Environment_Variables_3.exe");
+	STARTUPINFO si;
+	PROCESS_INFORMATION pi;
+	BOOL fSuccess;
+
+	lpszCurrentVariable = (LPTSTR)chNewEnv;
+	if (FAILED(StringCchCopy(lpszCurrentVariable, BUFSIZE, TEXT("MySetting=A"))))
+	{
+		printf("String copy failed\n");
+		return FALSE;
+	}
+
+	lpszCurrentVariable += lstrlen(lpszCurrentVariable) + 1;
+
+	if (FAILED(StringCchCopy(lpszCurrentVariable, BUFSIZE, TEXT("MyVersion=2"))))
+	{
+		printf("String copy faild\n");
+		return FALSE;
+	}
+	lpszCurrentVariable += lstrlen(lpszCurrentVariable) + 1;
+	*lpszCurrentVariable = 0;
+
+	SecureZeroMemory(&si, sizeof(STARTUPINFO));
+	si.cb = sizeof(STARTUPINFO);
+
+#ifdef UNICODE
+	dwFlags = CREATE_UNICODE_ENVIRONMENT;
+#endif // UNICODE
+	fSuccess = CreateProcess(szAppName, NULL, NULL, NULL, TRUE, dwFlags, chNewEnv, NULL, &si, &pi);
+	if (!fSuccess)
+	{
+		printf("CreateProcess failed(%d)\n", GetLastError());
+		return FALSE;
+	}
+	WaitForSingleObject(pi.hProcess, INFINITE);
+	return 0;
 }
-
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
