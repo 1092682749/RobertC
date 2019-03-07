@@ -1,4 +1,5 @@
-﻿#include "pch.h"
+﻿
+#include "pch.h"
 #include <windows.h>
 #include <iostream>
    //Comment this line to user wininet.
@@ -21,10 +22,10 @@ int main()
 	HINTERNET hInternetRoot;
 	hInternetRoot = InternetOpen(TEXT("WinInet Example"),
 		INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
-	HINTERNET hConnect = InternetConnect(hInternetRoot, L"dyzhello.club", 80,
-		NULL, NULL, NULL, NULL, NULL);
-	LPCWSTR type = L"text/html";
-	HINTERNET request = HttpOpenRequest(hConnect, L"GET", L"/articleList", NULL, L"www.baidu.com", &type, INTERNET_FLAG_SECURE, 0);
+	HINTERNET hConnect = InternetConnect(hInternetRoot, L"www.dyzhello.club", 443,
+		NULL, NULL, INTERNET_SERVICE_HTTP, NULL, NULL);
+	PCTSTR rgpszAcceptTypes[] = { L"text/*", NULL}; // 客户端接收的数据类型
+	HINTERNET request = HttpOpenRequest(hConnect, L"GET", L"/articleList", NULL, L"", rgpszAcceptTypes, INTERNET_FLAG_SECURE, 0);
 	BOOL success = HttpSendRequest(request, NULL, NULL, NULL,
 		0);
 	if (success)
