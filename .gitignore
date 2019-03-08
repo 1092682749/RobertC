@@ -61,3 +61,6 @@ Event_Object_Synchronization/Event_Object_Synchronization/Debug/
 >>>>>>> 4e807dded7effeff7f1795c57ce880d44c21c380
 Mutex_Syncchronization/Debug/
 Mutex_Syncchronization/Mutex_Syncchronization/Debug/
+IOCP_CopyFile/Debug/
+IOCP_CopyFile/IOCP_CopyFile/Debug/
+Waitable_Timer_Synchronization/Waitable_Timer_Synchronization/Debug/

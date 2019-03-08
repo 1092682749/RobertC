@@ -1,4 +1,4 @@
-// Mutex_Syncchronization.cpp : This file contains the 'main' function. Program execution begins and ends there.
+﻿// Mutex_Syncchronization.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
 #include "pch.h"
@@ -22,7 +22,7 @@ void ThreadFun_Attmpte_Obtain_Mutex(LPVOID lpParam)
 		std::cout << "My id is " << id << ",And I have Mutex\n";
 		std::cout << "Do worke.......\n";
 		std::cout << "ReleaseMUtex\n";
-		//ReleaseMutex(ghMutex);
+		ReleaseMutex(ghMutex);
 		break;
 	case WAIT_ABANDONED:
 		std::cout << "Mutex Abandoned And I get it\n";
@@ -34,14 +34,16 @@ int main()
 {
 	HANDLE aThread[THREADCOUNT];
 	DWORD TID[THREADCOUNT];
+
 	ghMutex = CreateMutex(NULL,
 		TRUE,
-		L"Mutex_To_Multiple_Thread");
+		L"Mutex_To_Multiple_Thread");											// 创建互斥锁
 	if (ghMutex == NULL)
 	{
 		std::cout << "CreateMytex faild\n";
 		return -1;
 	}
+
 	for (int i = 0; i < THREADCOUNT; i++)
 	{
 		aThread[i] = CreateThread(
@@ -51,7 +53,7 @@ int main()
 			&i,
 			0,
 			&TID[i]
-		);
+		);																		// 创建线程
 		if (aThread[i] == NULL)
 		{
 			std::cout << "CreateThread faild\n";
@@ -59,14 +61,14 @@ int main()
 		}
 	}
 	std::cout << "I will sleep 5s\n";
-	int timeCount = 5;
+	int timeCount = 5;															// 让主线程倒计时，在倒计时结束之前不释放锁
 	while (timeCount-- > 0)
 	{
 		std::cout << "Count down " << timeCount << "s \n";
 		Sleep(1000);
 	}
-	std::cout << "main thread wake\n";
-	ReleaseMutex(ghMutex);
+	std::cout << "main thread wake\n";											
+	ReleaseMutex(ghMutex);														// 释放Mutex
 	WaitForMultipleObjects(THREADCOUNT, aThread, TRUE, INFINITE);
 	return 0;
 }
