@@ -11,7 +11,7 @@ HANDLE THREADS[THREADCOUNT];
 // 线程函数:函数要去文件映射对象里去读取数据
 void ThreadFun(LPVOID lpParam)
 {
-	HANDLE tFm;
+	HANDLE thFm;
 	LPVOID address;
 	DWORD dwWaitResult;
 	std::cout << "Thread run...\n";
@@ -22,43 +22,28 @@ void ThreadFun(LPVOID lpParam)
 	{
 	case WAIT_OBJECT_0:
 		std::cout << "Wait result is: WAIT_OBJECT_0\n";
-		tFm = OpenFileMapping(FILE_MAP_ALL_ACCESS,
+		thFm = OpenFileMapping(FILE_MAP_ALL_ACCESS,
 			TRUE,
 			L"File_a_txt");
-		address = MapViewOfFile(tFm, FILE_MAP_READ, 0, 0, 0);
+		if (thFm == INVALID_HANDLE_VALUE)
+		{
+			std::cout << "OpenFileMapping faild\n";
+			return;
+		}
+		address = MapViewOfFile(thFm, FILE_MAP_READ, 0, 0, 0);
 		std::cout << (LPSTR)address << "\n";
-		CloseHandle(tFm);
+		CloseHandle(thFm);
 		break;
 	default:
 		std::cout << "Wait faild\n";
 		break;
 	}
-	
-
 }
+/*
+	线程创建早于filemapping如果同步失败，线程将无法OpenFileMapping
+*/
 int main()
 {
-	// 打开指定文件
-	HANDLE hFile = CreateFile(L"C:/Users/i-robert/Desktop/a.txt",
-		GENERIC_ALL,
-		FILE_SHARE_READ,
-		NULL,
-		OPEN_EXISTING,
-		FILE_ATTRIBUTE_NORMAL,
-		NULL);
-	// 为打开的文件创建file-mapping-object
-	HANDLE hFileMapping = CreateFileMapping(hFile,
-		NULL,
-		PAGE_EXECUTE_READWRITE,
-		0,
-		0,
-		L"File_a_txt");
-	LPVOID fileAddress = MapViewOfFile(
-		hFileMapping,
-		FILE_MAP_ALL_ACCESS,
-		0,
-		0,
-		0);
 	// 创建事件对象并初始为无信号
 	HANDLE hEvent = CreateEvent(
 		NULL,
@@ -77,7 +62,35 @@ int main()
 			&THREADIDS[i]
 		);
 	}
+	// 打开指定文件
+	HANDLE hFile = CreateFile(L"C:/Users/i-robert/Desktop/a.txt",
+		GENERIC_ALL,
+		FILE_SHARE_READ,
+		NULL,
+		OPEN_EXISTING,
+		FILE_ATTRIBUTE_NORMAL,
+		NULL);
+	// 一秒后更改文件内容
 	Sleep(1000);
+	SetFilePointer(hFile, 0, NULL, FILE_END);
+	char outBuf[] = "\r\nMain Thread Write Data\r\n";
+	WriteFile(hFile, outBuf, sizeof(outBuf), NULL, NULL);
+	FlushFileBuffers(hFile);
+	// 为打开的文件创建file-mapping-object
+	HANDLE hFileMapping = CreateFileMapping(hFile,	// 文件句柄
+		NULL,										// 文件安全属性，指向一个SECURITY_ATTRIBUTES结构体
+		PAGE_EXECUTE_READWRITE,						// 访问权限
+		0,											// 对象大小（高位）
+		0,											// 对象大小（低位）
+		L"File_a_txt");								// 对象命名
+	LPVOID fileAddress = MapViewOfFile(
+		hFileMapping,								// 文件映射对象的句柄
+		FILE_MAP_ALL_ACCESS,						// 访问权限
+		0,											// 偏移量（高位）
+		0,											// 偏移量（低位）
+		0);											// 映射到视图的字节数
+	
+	
 	std::cout << "Change event state\n";
 	if (!SetEvent(hEvent))
 	{
