@@ -30,6 +30,10 @@ Day5_Test/Day5_Test/Debug/
 Day8_authentication/Day8_authentication/Debug/
 Day8_URLTest/Day8_URLTest/Debug/
 WinINet_1/WinINet_1/Debug/
+<<<<<<< HEAD
+WinINet_1/x64/Debug/
+WinINet_1/WinINet_1/x64/Debug/
+=======
 Share_Memory_B/Share_Memory_B/Debug/
 Share_Memory_A/Debug/
 Share_Memory_A/Share_Memory_A/Debug/
@@ -54,3 +58,4 @@ Pipe_On_Process_Child/Pipe_On_Process_Child/Debug/
 Changing_Environment_Variables/Debug/
 Event_Object_Synchronization/Debug/
 Event_Object_Synchronization/Event_Object_Synchronization/Debug/
+>>>>>>> 4e807dded7effeff7f1795c57ce880d44c21c380
