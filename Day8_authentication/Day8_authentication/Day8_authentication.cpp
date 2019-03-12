@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <winhttp.h>
 #include <stdio.h>
+#include <iostream>
 
 #pragma comment(lib, "winhttp.lib")
 
@@ -77,14 +78,18 @@ void WinHttpAuthSample(IN SWinHttpSampleGet *pGetRequest)
 
 	// Create an HTTP request handle.
 	if (hConnect)
+	{
+		PCTSTR rgpszAcceptTypes[] = { TEXT("text/*"), NULL};
 		hRequest = WinHttpOpenRequest(hConnect,
 			L"GET",
 			pGetRequest->szPath,
-			NULL,
+			*rgpszAcceptTypes,
 			WINHTTP_NO_REFERER,
 			WINHTTP_DEFAULT_ACCEPT_TYPES,
 			(pGetRequest->fUseSSL) ?
 			WINHTTP_FLAG_SECURE : 0);
+	}
+		
 
 	// Continue to send a request until status code 
 	// is not 401 or 407.
@@ -232,11 +237,30 @@ int main()
 {
 	SWinHttpSampleGet getRequest;
 	//getRequest = *((SWinHttpSampleGet*)malloc(sizeof(SWinHttpSampleGet)));
-	getRequest.fUseSSL = false;
+	getRequest.fUseSSL = true;
 	getRequest.szPath = L"/test";
 	getRequest.szServer = L"127.0.0.1";
 	getRequest.szServerUsername = L"123";
 	getRequest.szProxyPassword = L"123";
-	WinHttpAuthSample(&getRequest);
+	//WinHttpAuthSample(&getRequest);
+	char (*ip)[10];
+	char *lp;
+	lp = (char*)malloc(sizeof(char) * 10);
+	memset(lp, 'u', 10);
+	ip = (char(*)[10])lp;
+	lp[1] = '1';
+	lp[0] = '0';
+	//char(*ipp)[10][10];
+	(*ip)[2] = '2';
+	std::cout << *ip << "\n";
+	std::cout << lp << "======================\n";
+	std::cout << &(*ip) << "\n" << &lp << "\n";
+	printf("%x\n", lp);
+	printf("%x\n", ip);
+	printf("%x\n", *ip);
+	printf("%c", *((*ip)));
+	printf("%c", *lp);
+	char *p;
+	char **pp;
 	return 0;
 }
