@@ -108,7 +108,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -151,6 +151,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CmnHdr.h" />
+    <ClInclude Include="EnsureCleanup.h" />
+    <ClInclude Include="IoCompletionPort.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
