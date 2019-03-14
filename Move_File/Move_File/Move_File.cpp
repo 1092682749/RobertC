@@ -18,7 +18,7 @@ DWORD CALLBACK CopyProgressRoutine(
 	HANDLE hDestinationFile,
 	LPVOID lpData)
 {
-	std::cout << "YES!\n";
+	std::cout << "\r%" << TotalBytesTransferred.QuadPart * 100 % TotalFileSize.QuadPart;
 	return PROGRESS_CONTINUE;
 }
 DWORD CALLBACK CopyProgress(
@@ -35,7 +35,7 @@ DWORD CALLBACK CopyProgress(
 {
 	static int nRecord = 0;
 	nRecord++;
-	printf("回调次数：%d 已传输：%08X:%08X 文件大小：%08X:%08X ",
+	_tprintf(L"回调次数：%d 已传输：%08X:%08X 文件大小：%08X:%08X ",
 		nRecord,
 		TotalBytesTransferred.HighPart,
 		TotalBytesTransferred.LowPart,
@@ -55,17 +55,18 @@ int main()
 	{
 		_tprintf(L"SetCurrentDirectory faild!\n");
 	}
-	// 移动文件若果文件存在
-	if (!MoveFileWithProgress(L"/a/Evernote_6.17.9.553.exe", L"/a/aa/Evernote_6.17.9.553.exe", (LPPROGRESS_ROUTINE)CopyProgressRoutine, NULL, MOVEFILE_COPY_ALLOWED))
+	// 移动文件若果文件存在 Move file 不能成功回调
+	/*if (!MoveFileWithProgress(L"/a/Evernote_6.17.9.553.exe", L"/a/aa/Evernote_6.17.9.553.exe", (LPPROGRESS_ROUTINE)CopyProgress, NULL, MOVEFILE_COPY_ALLOWED))
 	{
 		_tprintf(L"Move faild!\n");
 		return -1;
-	}
-	/*if (!CopyFileEx(L"/a/Evernote_6.17.9.553.exe", L"/a/aa/Evernote_6.17.9.553.exe", (LPPROGRESS_ROUTINE)CopyProgressRoutine, NULL, FALSE, COPY_FILE_FAIL_IF_EXISTS))
+	}*/
+	// Copy file
+	if (!CopyFileEx(L"/a/Evernote_6.17.9.553.exe", L"/a/aa/Evernote_6.17.9.553.exe", (LPPROGRESS_ROUTINE)CopyProgressRoutine, NULL, FALSE, COPY_FILE_FAIL_IF_EXISTS))
 	{
 		_tprintf(L"Move faild!\n");
 			return -1;
-	}*/
-	_tprintf(L"Completed!\n");
+	}
+	_tprintf(L"\nCompleted!\n");
 	return 0;
 }
