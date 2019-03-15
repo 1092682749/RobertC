@@ -49,6 +49,7 @@ int main()
 	} while (dwAlreadySize != 0);
 	CloseHandle(hTempFile);
 	CloseHandle(hLocalFile);
+	// 将临时文件移动到新的文件里
 	bRes = MoveFileEx(fullName, L"D:/a/moveex.txt", MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
 	if (!bRes)
 	{

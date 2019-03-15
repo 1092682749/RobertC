@@ -86,7 +86,7 @@ private:
 BOOL FileCopy(PCTSTR pszFileSrc, PCTSTR pszFileDst)
 {
 	BOOL bOk = FALSE;
-	// ╡Бйт╦Ёж╣╦Ьака╙╨олЕ╣дддр╩╦Ж
+	// О©╫О©╫О©╫т╦О©╫ж╣О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫р╩О©╫О©╫
 	LARGE_INTEGER liFileSizeSrc = { 0 }, liFileSizeDst;
 	try
 	{
