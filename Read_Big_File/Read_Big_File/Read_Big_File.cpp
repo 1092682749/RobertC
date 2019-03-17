@@ -12,10 +12,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
+#include <string>
+#include <time.h>
 //#include <stdio.h>
 //
 #pragma comment(lib, "Ws2_32.lib")
 
+#define BUFSIZE 1024
+#define SAVEPATH "C:/dyzFiles/code/"
+
+char readBuf[BUFSIZE];
 int main()
 {
 	WSADATA wsaData;
@@ -49,8 +55,45 @@ int main()
 	}
 	sockaddr addr;
 	int clientLen = 16;
-	SOCKET clientSock = accept(sock, &addr, &clientLen);
-	std::cout << addr.sa_data << "\n";
-	// SOCKET clientSock = accept(sock, NULL, NULL);
+	// SOCKET clientSock = accept(sock, &addr, &clientLen);
+	// std::cout << addr.sa_data << "\n";
+	SOCKET clientSock = accept(sock, NULL, NULL);
+	DWORD readByteNumber = 0, readCount = 0, writeByteNumber = 0;
+	char *fixName;
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	do
+	{
+		readCount++;
+		readByteNumber = recv(clientSock, readBuf, BUFSIZE, 0);
+		if (readByteNumber <= 0 || readByteNumber == SOCKET_ERROR)
+		{
+			break;
+		}
+		if (readCount == 1)
+		{
+				fixName = readBuf;
+				std::cout << readBuf << "\n";
+				std::string str = SAVEPATH;
+				str.append(readBuf);
+				std::cout << str << "\n";
+				hFile = CreateFileA(str.data(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		}
+		else
+		{
+			if (hFile == INVALID_HANDLE_VALUE)
+			{
+				printf("Error = %d", GetLastError());
+				return -5;
+			}
+			if (!WriteFile(hFile, readBuf, readByteNumber, &writeByteNumber, NULL))
+			{
+				printf("Error = %d", GetLastError());
+				return -6;
+			}
+		}
+	} while (readByteNumber > 0);
+	CloseHandle(hFile);
+	closesocket(clientSock);
+	closesocket(sock);
 	return 0;
 }
