@@ -17,16 +17,71 @@
 #define BUFSIZE 1024
 #define SAVEPATH "D:/a/"
 #define IPLEN 32
+#define INTSIZE 4
 
 
 #pragma comment(lib, "Ws2_32.lib")
 
-
+enum ERRORTYPE
+{
+	DATA_SOCKET_ERROR = 1,
+	CMD_SOCKET_ERROR,
+	FILE_HANDLE_ERROR,
+	WRITE_OR_READ_ERROR
+};
 typedef struct ConnectInfo
 {
 	SOCKET s;
 	sockaddr_in sa;
 }*pConnectInfo;
+
+void parseMessage(int argc, char* args[], const char* message)
+{
+	int len = 0, point = 0;
+	for (int i = 0; i < argc; i++)
+	{
+		CopyMemory(&len, message + point, INTSIZE);
+		CopyMemory(args[i], message + point + INTSIZE, len);
+		point += INTSIZE + len;
+	}
+}
+
+int HandPutCMD(int argc, char* args[], const SOCKET &s)
+{
+	if (s == INVALID_SOCKET)
+	{
+		std::cout << "该数据socket已经为无效\n";
+		return DATA_SOCKET_ERROR;
+	}
+	std::string str = SAVEPATH;
+	str.append(args[2]);
+	std::cout << args[2] << "\n";
+	HANDLE hUploadFile = CreateFileA(str.data(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hUploadFile == INVALID_HANDLE_VALUE)
+	{
+		std::cout << "hUploadFile invalid\n";
+		return FILE_HANDLE_ERROR;
+	}
+	char readFileBuf[BUFSIZE];
+	int readNumber = 0;
+	DWORD writeNumber = 0;
+	do
+	{
+		readNumber = recv(s, readFileBuf, BUFSIZE, 0);
+		if (!WriteFile(hUploadFile, readFileBuf, readNumber, &writeNumber, NULL))
+		{
+			std::cout << "WriteFile faild\n";
+			return WRITE_OR_READ_ERROR;
+		}
+	} while (readNumber > 0);
+	CloseHandle(hUploadFile);
+	return 0;
+}
+void HandGetCMD(const char* &cmd, const SOCKET &s)
+{
+
+}
+
 
 // 工作线程用来处理连接
 void WorkThreadFun(LPVOID lpParam)
@@ -72,7 +127,7 @@ void WorkThreadFun(LPVOID lpParam)
 				MySocketUtils::SocketFactory::GetClientSocket(dataSock, cFromIp, readBuf, clientAddrResult);
 				if (connect(dataSock, clientAddrResult->ai_addr, clientAddrResult->ai_addrlen) != SOCKET_ERROR)
 				{
-					send(dataSock, "test", 4, 0);
+					send(dataSock, " ok! ", 5, 0);
 				}
 			}
 			else
@@ -87,22 +142,36 @@ void WorkThreadFun(LPVOID lpParam)
 		// 该分支用来解析命令
 		else
 		{
+			char cmd[1024] = { 0 };
+			char fileArg[200] = { 0 }, fileArg2[200] = { 0 };
 			std::string str = SAVEPATH;
 			str.append(readBuf);
 			std::cout << readBuf << "\n";
-			char cmdHeader[10];
-			memset(cmdHeader, 0, 10);
-			CopyMemory(cmdHeader, readBuf, 3);
-			if (strcmp("put", cmdHeader) == 0)
+			char* args[3];
+			for (int i = 0; i < 3; i++)
+			{
+				args[i] = new char[1024];
+				memset(args[i], 0, 1024);
+			}
+			parseMessage(3, args, readBuf);
+			CopyMemory(cmd, args[0], sizeof(args[0]));
+			CopyMemory(fileArg, args[1], sizeof(args[1]));
+			CopyMemory(fileArg2, args[2], sizeof(args[2]));
+			
+			if (strcmp("put", cmd) == 0)
 			{
 				std::cout << readBuf << "\n";
 				std::cout << "这是一个put命令\n";
+				if (HandPutCMD(3, args, dataSock) != 0)
+				{
+					break;
+				}
 			}
-			else if (strcmp("get", cmdHeader) == 0)
+			else if (strcmp("get", cmd) == 0)
 			{
 				std::cout << "这是一个get命令\n";
 			}
-			else if (strcmp("ext", cmdHeader) == 0)
+			else if (strcmp("ext", cmd) == 0)
 			{
 				std::cout << "关闭和客户端" << fromIp << "的连接\n";
 				break;
@@ -120,6 +189,7 @@ void WorkThreadFun(LPVOID lpParam)
 			}*/
 		}
 	} while (readByteNumber > 0);
+	send(clientSock, "连接已关闭!", 12, 0);
 	CloseHandle(hFile);
 	closesocket(clientSock);
 }
@@ -169,3 +239,9 @@ int main()
 	closesocket(sock);
 	return 0;
 }
+/*
+	该协议(smftp)报文格式分为三段(Simple File Transfer Protocol)
+	commendType:([int][string]) int类型的参数使用四个字节用来标识string长度；
+	filename1([int][string]) 参数类型意义同上
+	filename2([int][string]) 同上
+*/

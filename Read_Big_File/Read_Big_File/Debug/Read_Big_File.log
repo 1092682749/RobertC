@@ -1,2 +1,3 @@
-﻿  Read_Big_File.cpp
-  Read_Big_File.vcxproj -> C:\Users\i-robert\source\repos\Read_Big_File\Debug\Read_Big_File.exe
+﻿C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(391,5): warning MSB8028: The intermediate directory (Debug\) contains files shared from another project (Read_Big_File.vcxproj).  This can lead to incorrect clean and rebuild behavior.
+  Read_Big_File.cpp
+  Read_Big_File.vcxproj -> C:\Users\i-robert\source\repos\Read_Big_File\Debug\Simple_File_Transfer_Protocol.exe
