@@ -1,9 +1,14 @@
-#include "pch.h"
+#pragma once
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-namespace MySocketUtils 
+namespace MySocketUtils
 {
+	enum EndType
+	{
+		END_TYPE_SERVER,
+		END_TYPE_CLIENT
+	};
 	class SocketFactory
 	{
 	public:
@@ -12,27 +17,14 @@ namespace MySocketUtils
 		static int protocol;
 		static char *port;
 		static char *ip;
+		static char *host;
 		static int family;
 		static int flags;
-		static int GetSocket(SOCKET &sock, char *port)
-		{
-			WSADATA wsaData;
-			WSAStartup(version, &wsaData);
-			addrinfo ai, *addrResult;
-			memset(&ai, 0, sizeof(addrinfo));
-			ai.ai_flags = flags;
-			ai.ai_family = family;
-			ai.ai_protocol = protocol;
-			ai.ai_socktype = socketType;
-			SocketFactory::port = port;
-			int retCode = getaddrinfo(NULL, port, &ai, &addrResult);
-			sock = socket(addrResult->ai_family, addrResult->ai_socktype, addrResult->ai_protocol);
-			return 0;
-		}
+		// 获取监听socket
+		static int GetSocket(SOCKET &sock, const char* port, addrinfo* &addrResult);
+		// 获取连接socket
+		static int GetClientSocket(SOCKET &sock, char* host, const char *port, addrinfo* &addrResult);
 	};
-	WORD SocketFactory::version = MAKEWORD(2, 2);
-	int SocketFactory::protocol = IPPROTO_TCP;
-	int SocketFactory::socketType = SOCK_STREAM;
-	int SocketFactory::family = AF_INET;
-	int SocketFactory::flags = AI_PASSIVE;
 }
+
+
