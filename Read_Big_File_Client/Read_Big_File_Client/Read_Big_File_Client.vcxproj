@@ -154,6 +154,7 @@
   <ItemGroup>
     <ClInclude Include="MySocketUtils.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="SMFTP_CMD.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">

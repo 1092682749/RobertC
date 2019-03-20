@@ -15,10 +15,12 @@
 
 
 #define BUFSIZE 1024
-#define SAVEPATH "D:/a/"
+#define SAVEPATH ""
 #define IPLEN 32
 #define INTSIZE 4
-
+SOCKET sock;
+char OK_STATUS[] = "OK!";
+char CLOSE_MESSAGE[] = "连接已关闭";
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -73,13 +75,41 @@ int HandPutCMD(int argc, char* args[], const SOCKET &s)
 			std::cout << "WriteFile faild\n";
 			return WRITE_OR_READ_ERROR;
 		}
-	} while (readNumber > 0);
+	} while (readNumber >= BUFSIZE);
+	std::cout << "传输完成\n";
 	CloseHandle(hUploadFile);
 	return 0;
 }
-void HandGetCMD(const char* &cmd, const SOCKET &s)
+int HandGetCMD(int argc, char* args[], const SOCKET &s)
 {
-
+	char readBuf[BUFSIZE] = { 0 };
+	DWORD readNumber = 0;
+	HANDLE hGetFile = CreateFileA(args[1], GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_ALWAYS, NULL, NULL);
+	if (hGetFile == INVALID_HANDLE_VALUE)
+	{
+		std::cout << "FILE_HANDLE_ERROR\n";
+		return FILE_HANDLE_ERROR;
+	}
+	do
+	{
+		if (!ReadFile(hGetFile, readBuf, BUFSIZE, &readNumber, NULL))
+		{
+			std::cout << "WRITE_OR_READ_ERROR\n";
+			return WRITE_OR_READ_ERROR;
+		}
+		if (readNumber == 0)
+		{
+			std::cout << "读取完成\n";
+			break;
+		}
+		if (send(s, readBuf, readNumber, 0) == SOCKET_ERROR)
+		{
+			std::cout << "DATA_SOCKET_ERROR\n";
+			return DATA_SOCKET_ERROR;
+		}
+	} while (readNumber > 0);
+	CloseHandle(hGetFile);
+	return 0;
 }
 
 
@@ -112,12 +142,11 @@ void WorkThreadFun(LPVOID lpParam)
 		{
 
 			fixName = readBuf;
-			std::cout << readBuf << "\n";
 			std::stringstream ostr;
 			ostr << readBuf;
 			int port;
 			ostr >> port;
-			printf("PORT:%d", port);
+			printf("客户端待连PORT:%d\n", port);
 			// 端口有效则连入客户端
 			if (port > 1024 && port < 10000)
 			{
@@ -127,7 +156,7 @@ void WorkThreadFun(LPVOID lpParam)
 				MySocketUtils::SocketFactory::GetClientSocket(dataSock, cFromIp, readBuf, clientAddrResult);
 				if (connect(dataSock, clientAddrResult->ai_addr, clientAddrResult->ai_addrlen) != SOCKET_ERROR)
 				{
-					send(dataSock, " ok! ", 5, 0);
+					send(dataSock, OK_STATUS, strlen(OK_STATUS), 0);
 				}
 			}
 			else
@@ -170,6 +199,10 @@ void WorkThreadFun(LPVOID lpParam)
 			else if (strcmp("get", cmd) == 0)
 			{
 				std::cout << "这是一个get命令\n";
+				if (HandGetCMD(3, args, dataSock) != 0)
+				{
+					break;
+				}
 			}
 			else if (strcmp("ext", cmd) == 0)
 			{
@@ -189,9 +222,10 @@ void WorkThreadFun(LPVOID lpParam)
 			}*/
 		}
 	} while (readByteNumber > 0);
-	send(clientSock, "连接已关闭!", 12, 0);
+	send(clientSock, CLOSE_MESSAGE, strlen(CLOSE_MESSAGE), 0);
 	CloseHandle(hFile);
 	closesocket(clientSock);
+	closesocket(dataSock);
 }
 
 int main()
@@ -199,7 +233,7 @@ int main()
 	print_UI_Welcome();
 	printf("Start up...");
 	
-	SOCKET sock;
+	
 	addrinfo *addrResult = NULL;
 	
 	int retCode = MySocketUtils::SocketFactory::GetSocket(sock, "8080", addrResult);

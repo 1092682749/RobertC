@@ -21,6 +21,9 @@
     <ClInclude Include="MySocketUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SMFTP_CMD.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">

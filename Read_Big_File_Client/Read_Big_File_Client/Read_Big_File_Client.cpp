@@ -4,20 +4,30 @@
 #include "pch.h"
 #include <iostream>
 #include "MySocketUtils.h"
+#include "SMFTP_CMD.h"
 
 #define READBUFSIZE 1024
 #define INTSIZE 4
+
+enum ERRORTYPE
+{
+	DATA_SOCKET_ERROR = 1,
+	CMD_SOCKET_ERROR,
+	FILE_HANDLE_ERROR,
+	WRITE_OR_READ_ERROR
+};
 
 SOCKET client;
 char cmd[1024] = { 0 };
 char fileArg[200] = { 0 }, fileArg2[200] = { 0 };
 SOCKET dataListenSock = INVALID_SOCKET;
 SOCKET dataConnectSock = INVALID_SOCKET;
+fd_set sSet;
 
 void waitDataConnect(LPVOID lpParam)
 {
 	char* msg = (char*)lpParam;
-	char data[1024];
+	char data[1024] = { 0 };
 	addrinfo *ai;
 	MySocketUtils::SocketFactory::GetSocket(dataListenSock, msg, ai);
 	bind(dataListenSock, ai->ai_addr, ai->ai_addrlen);
@@ -29,26 +39,36 @@ void waitDataConnect(LPVOID lpParam)
 		return;
 	}
 	recv(dataConnectSock, data, 1024, 0);
-	std::cout << "Success Data Connect!" << data << "\n";
+	std::cout << "Success Data Connect!\nResponse: " << data << "\n";
 }
 void ReadServerResponse(LPVOID lpParam)
 {
 	char outBuf[1024] = { 0 };
-	SOCKET s = (SOCKET)lpParam;
+	SOCKET *s = (SOCKET*)lpParam;
+	int readNumber = 0;
 	while (true)
 	{
-		if (recv(s, outBuf, 1024, 0) == SOCKET_ERROR)
+		readNumber = recv(*s, outBuf, 1024, 0);
+		if (readNumber == SOCKET_ERROR)
 		{
-			break;
+			std::cout << GetLastError() << "\n";
+			continue;
 		}
-		std::cout << outBuf << "\n";
+		if (readNumber > 0)
+		{
+			std::cout << outBuf << "\n";
+		}
 	}
 }
-void putFile(const char* fileName)
+int putFile(const char* fileName)
 {
 	TCHAR wFileName[1024] = { 0 };
 	MultiByteToWideChar(CP_UTF8, 0, fileName, 1024, wFileName, 1024);
 	HANDLE hUploadFile = CreateFile(wFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hUploadFile == INVALID_HANDLE_VALUE)
+	{
+		return FILE_HANDLE_ERROR;
+	}
 	char readFileBuf[READBUFSIZE];
 	DWORD readNumber = 0;
 
@@ -57,14 +77,50 @@ void putFile(const char* fileName)
 		if (!ReadFile(hUploadFile, readFileBuf, READBUFSIZE, &readNumber, NULL))
 		{
 			std::cout << "Read Faild!\n";
+			return WRITE_OR_READ_ERROR;
+		}
+		if (readNumber == 0)
+		{
 			break;
 		}
-		send(dataConnectSock, readFileBuf, readNumber, 0);
+		if (send(dataConnectSock, readFileBuf, readNumber, 0) == SOCKET_ERROR)
+		{
+			return DATA_SOCKET_ERROR;
+		}
+		/*std::cout << "我发送了" << readNumber << "个字节\n";*/
 	} while (readNumber > 0);
+	CloseHandle(hUploadFile);
+	return 0;
 }
-void getFile(char* &fileName)
+int getFile(const char* fileName)
 {
-
+	FD_SET(dataConnectSock, &sSet);
+	timeval tv;
+	tv.tv_sec = 1;
+	tv.tv_usec = 0;
+	char readBuf[READBUFSIZE];
+	DWORD readNumber = 0, writeNumber = 0;
+	HANDLE hGetFile = CreateFileA(fileName, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hGetFile == INVALID_HANDLE_VALUE)
+	{
+		return FILE_HANDLE_ERROR;
+	}
+	do
+	{
+		readNumber = recv(dataConnectSock, readBuf, READBUFSIZE, 0);
+		if (readNumber == SOCKET_ERROR)
+		{
+			return DATA_SOCKET_ERROR;
+		}
+		if (!WriteFile(hGetFile, readBuf, readNumber, &writeNumber, NULL))
+		{
+			std::cout << "Writr faild\n";
+			return WRITE_OR_READ_ERROR;
+		}
+		/*std::cout << "写入文件" << writeNumber << "个字节\n";*/
+	} while (readNumber >= READBUFSIZE);
+	CloseHandle(hGetFile);
+	return 0;
 }
 void CombineMessage(int argc, char* args[], char* message)
 {
@@ -80,6 +136,8 @@ void CombineMessage(int argc, char* args[], char* message)
 }
 int main()
 {
+	FD_ZERO(&sSet);
+	
 	addrinfo *ai;
 	char host[] = "127.0.0.1", msg[] = "9000";
 	int retCode = 0;
@@ -97,12 +155,14 @@ int main()
 	{
 		return -1;
 	}
+	FD_SET(client, &sSet);
 	HANDLE hDataThread = CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)waitDataConnect, msg, NULL, NULL);
 	HANDLE hReadThread = CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)ReadServerResponse, &client, NULL, NULL);
+	WaitForSingleObject(hDataThread, INFINITE);
 	// 传输指令
+	
 	while (true)
 	{
-		WaitForSingleObject(hDataThread, INFINITE);
 		if (dataConnectSock == INVALID_SOCKET)
 		{
 			std::cout << "数据连接建立失败！\n";
@@ -121,34 +181,37 @@ int main()
 		cmdLine[2] = fileArg2;
 
 		getchar();
+		// 生成报文缓冲
 		CombineMessage(3, cmdLine, message);
-		
-		int cmpCode = strcmp("put", cmd);
+		// 发送报文
+		int s = sizeof(message);
+		if (send(client, message, sizeof(message), 0) == SOCKET_ERROR)
+		{
+			std::cout << "Occur SOCKET_ERROR\n";
+			break;
+		}
+		//根据命令类型进行处理
 		if (strcmp("put", cmd) == 0)
 		{
-			std::cout << "我将发送一个put命令\n";
-			cmd[3] = ' ';
-			send(client, message, sizeof(message), 0);
-			putFile(fileArg);
+			std::cout << "我发送一个put命令\n";
+		
+			if (putFile(fileArg) != 0)
+			{
+				break;
+			}
 
 		}
-		else if (strcmp("get", cmd) == 0)
+		else if (strcmp(SMFTP_GET, cmd) == 0)
 		{
-			std::cout << "我将发送一个get命令\n";
-			cmd[3] = ' ';
-			CopyMemory(cmd + 4, fileArg, strlen(fileArg));
-			if (send(client, message, 1024, 0) == SOCKET_ERROR)
+			std::cout << "我发送一个get命令\n";
+			if (getFile(fileArg2) != 0)
 			{
-				std::cout << "Occur SOCKET_ERROR\n";
 				break;
 			}
 		}
-		else if (strcmp("ext", cmd) == 0)
+		else if (strcmp(SMFTP_EXIT, cmd) == 0)
 		{
 			std::cout << "程序即将退出\n";
-			cmd[3] = ' ';
-			CopyMemory(cmd + 4, fileArg, strlen(fileArg));
-			send(client, message, 1024, 0);
 			break;
 		}
 	}
