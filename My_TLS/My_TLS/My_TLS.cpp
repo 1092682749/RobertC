@@ -3,7 +3,8 @@
 #include "pch.h"
 #include <Windows.h>
 #include <iostream>
-
+char nameArr[3][10] = { "Thread_A", "Thread_B", "Thread_C" };
+HANDLE ghMutex;
 void ThreadMainFun(LPVOID lpParam);
 
 void ThreadCall();
@@ -14,11 +15,13 @@ HANDLE hHeap;
 int main()
 {
 	thread_name = TlsAlloc();
-	DWORD TID;
 	HANDLE hThreads[3];
+	ghMutex = CreateMutex(NULL, FALSE, TEXT("M"));
 	for (int i = 0; i < 3; i++)
 	{
-		hThreads[i] = CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)ThreadMainFun, &i, 0, &TID);
+		int *ii = (int*)malloc(sizeof(int));
+		*ii = i;
+		hThreads[i] = CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)ThreadMainFun, ii, 0, NULL);
 		if (hThreads[i] == NULL)
 		{
 			std::cout << "create thread faild\n";
@@ -32,20 +35,19 @@ void ThreadMainFun(LPVOID lpParam)
 {
 	hHeap = GetProcessHeap();
 	int i = *((int *)lpParam);
-	char name[10] = "I'am ";
-	name[5] = i + ('1' - 1);
-	name[6] = 0;
-	//LPVOID baseAddress = HeapAlloc(LPTR, 10 * sizeof(char));
 	LPVOID baseAddress = HeapAlloc(hHeap, LPTR, 10 * sizeof(char));
-	CopyMemory(baseAddress, name, strlen(name) * sizeof(char));
+	CopyMemory(baseAddress, nameArr[i], strlen(nameArr[i]) * sizeof(char));
 	TlsSetValue(thread_name, baseAddress);
 	ThreadCall();
 }
 
 void ThreadCall()
 {
+	WaitForSingleObject(ghMutex, INFINITE);
 	LPVOID name = TlsGetValue(thread_name);
-	std::cout << (char*)name << std::endl;
-	//LocalFree((HLOCAL)name);
+	char pFormatName[10] = { 0 };
+	CopyMemory(pFormatName, name, 8);
+	printf("%s\n", pFormatName);
 	HeapFree(hHeap, NULL, name);
+	ReleaseMutex(ghMutex);
 }

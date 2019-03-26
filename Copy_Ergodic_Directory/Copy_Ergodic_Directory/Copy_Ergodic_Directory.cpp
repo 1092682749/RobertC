@@ -12,6 +12,7 @@ void DisplayErrorBox(LPTSTR lpszFunction);
 
 int _tmain(int argc, TCHAR *argv[])
 {
+	system("color 01");
 	WIN32_FIND_DATA ffd;
 	LARGE_INTEGER filesize;
 	TCHAR szDir[MAX_PATH];

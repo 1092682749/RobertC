@@ -2,105 +2,50 @@
 //
 
 #include "pch.h"
-//#include <Windows.h>
+#include <Windows.h>
 #include <iostream>
 
-//DWORD thread_name;
-//int main()
-//{
-//	
-//	return 0;
-//}
-#include <windows.h> 
-#include <stdio.h> 
+#define THREADCOUNT 3
+DWORD thread_name;
+HANDLE hThreadEvent;
+HANDLE hMainEvents[THREADCOUNT];
 
-#define THREADCOUNT 4 
-DWORD dwTlsIndex;
-
-VOID ErrorExit(LPSTR);
-
-VOID CommonFunc(VOID)
+void ThreadFun(LPVOID lpParam)
 {
-	LPVOID lpvData;
-
-	// Retrieve a data pointer for the current thread. 
-
-	lpvData = TlsGetValue(dwTlsIndex);
-	if ((lpvData == 0) && (GetLastError() != ERROR_SUCCESS))
-		ExitProcess(0);
-		// ErrorExit("TlsGetValue error");
-
-	// Use the data stored for the current thread. 
-
-	printf("common: thread %d: lpvData=%lx\n",
-		GetCurrentThreadId(), lpvData);
-
-	Sleep(5000);
-}
-
-DWORD WINAPI ThreadFunc(VOID)
-{
-	LPVOID lpvData;
-
-	// Initialize the TLS index for this thread. 
-
-	lpvData = (LPVOID)LocalAlloc(LPTR, 256);
-	if (!TlsSetValue(dwTlsIndex, lpvData))
-		//ErrorExit("TlsSetValue error");
-		ExitProcess(0);
-
-	printf("thread %d: lpvData=%lx\n", GetCurrentThreadId(), lpvData);
-
-	CommonFunc();
-
-	// Release the dynamic memory before the thread returns. 
-
-	lpvData = TlsGetValue(dwTlsIndex);
-	if (lpvData != 0)
-		LocalFree((HLOCAL)lpvData);
-
-	return 0;
-}
-
-int main(VOID)
-{
-	DWORD IDThread;
-	HANDLE hThread[THREADCOUNT];
-	int i;
-
-	// Allocate a TLS index. 
-
-	if ((dwTlsIndex = TlsAlloc()) == TLS_OUT_OF_INDEXES)
-		ExitProcess(0);
-		// ErrorExit("TlsAlloc failed");
-
-	// Create multiple threads. 
-
-	for (i = 0; i < THREADCOUNT; i++)
+	int i = *(int*)lpParam;
+	char name[10] = "I am ";
+	name[6] = i + (1 - '1');
+	if (!TlsSetValue(thread_name, name))
 	{
-		hThread[i] = CreateThread(NULL, // default security attributes 
-			0,                           // use default stack size 
-			(LPTHREAD_START_ROUTINE)ThreadFunc, // thread function 
-			NULL,                    // no thread function argument 
-			0,                       // use default creation flags 
-			&IDThread);              // returns thread identifier 
-
-	  // Check the return value for success. 
-		if (hThread[i] == NULL)
-			ExitProcess(0);
-			// ErrorExit("CreateThread error\n");
+		std::cout << "设置线程本地存储失败\n";
+		return;
 	}
-
-	for (i = 0; i < THREADCOUNT; i++)
-		WaitForSingleObject(hThread[i], INFINITE);
-
-	TlsFree(dwTlsIndex);
-
-	return 0;
+	//char *getName = (char*)TlsGetValue(thread_name);
+	//std::cout << "我是线程" << i << "我已经准备好了\n";
+	//SetEvent(hMainEvents[i]);
+	//WaitForSingleObject(hThreadEvent, INFINITE);
+	std::cout << "我是线程" << i << "name是：" << (char*)TlsGetValue(thread_name) << "\n";
 }
-
-VOID ErrorExit(const char* lpszMessage)
+int main()
 {
-	fprintf(stderr, "%s\n", lpszMessage);
-	ExitProcess(0);
+	thread_name = TlsAlloc();
+	HANDLE hThreads[THREADCOUNT];
+	
+	
+	hThreadEvent = CreateEvent(NULL, TRUE, FALSE, L"TE");
+	for (int i = 0; i < THREADCOUNT; i++)
+	{
+		hMainEvents[i] = CreateEvent(NULL, TRUE, FALSE, L"ME");
+	}
+	for (int i = 0; i < THREADCOUNT; i++)
+	{
+		int *ii = (int*)malloc(sizeof(int));
+		*ii = i;
+		hThreads[i] = CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)ThreadFun, ii, 0, NULL);
+	}
+	/*WaitForMultipleObjects(THREADCOUNT, hMainEvents, TRUE, INFINITE);
+	SetEvent(hThreadEvent);*/
+	WaitForMultipleObjects(THREADCOUNT, hThreads, TRUE, INFINITE);
+	TlsFree(thread_name);
+	return 0;
 }
