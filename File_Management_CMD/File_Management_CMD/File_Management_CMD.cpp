@@ -13,9 +13,14 @@ enum operation
 };
 void DisplayFiles()
 {
+
 	WIN32_FIND_DATA fileData;
 	HANDLE hCurrentFile = INVALID_HANDLE_VALUE;
 	hCurrentFile = FindFirstFile(TEXT("*"), &fileData);
+	if (hCurrentFile == INVALID_HANDLE_VALUE)
+	{
+		std::cout << "查找文件失败\n";
+	}
 	do
 	{
 		if (fileData.dwFileAttributes == FILE_ATTRIBUTE_DIRECTORY)
@@ -27,14 +32,16 @@ void DisplayFiles()
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_INTENSITY | FOREGROUND_RED |
 			FOREGROUND_GREEN | FOREGROUND_BLUE);
 	} while (FindNextFile(hCurrentFile, &fileData));
-	CloseHandle(hCurrentFile);
+	// CloseHandle(hCurrentFile);
 }
-
+// Copy和Move
 void MyCopyFile(const char* oldFile, const char* newFile, int flag)
 {
+	// 转换字节序列为宽字节序列
 	TCHAR wOldFile[200] = { 0 }, wNewFile[200] = { 0 };
 	MultiByteToWideChar(CP_UTF8, NULL, oldFile, strlen(oldFile), wOldFile, 200);
 	MultiByteToWideChar(CP_UTF8, NULL, newFile, strlen(newFile), wNewFile, 200);
+
 	if (flag == COPY)
 	{
 		if (!CopyFile(wOldFile, wNewFile, FALSE))
@@ -62,6 +69,7 @@ void print_help()
 	std::cout << "delete [filename]\n";
 	std::cout << "ls\n";
 	std::cout << "cd  [path]\n";
+	std::cout << "append [filename]\n";
 }
 void MyDeleteFile(const char* fileName)
 {
@@ -172,6 +180,5 @@ int main()
 			std::cout << "输入 -h 以获得帮助\n";
 		}
 	}
-
 	return 0;
 }
