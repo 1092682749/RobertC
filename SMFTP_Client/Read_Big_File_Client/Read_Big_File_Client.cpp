@@ -8,6 +8,7 @@
 
 #define READBUFSIZE 1024
 #define INTSIZE 4
+char endFlag[16] = { 0 };
 
 enum ERRORTYPE
 {
@@ -24,11 +25,13 @@ SOCKET dataListenSock = INVALID_SOCKET;
 SOCKET dataConnectSock = INVALID_SOCKET;
 fd_set sSet;
 
+// 启动数据连接
 void waitDataConnect(LPVOID lpParam)
 {
 	char* msg = (char*)lpParam;
 	char data[1024] = { 0 };
 	addrinfo *ai;
+	// 获取socket
 	MySocketUtils::SocketFactory::GetSocket(dataListenSock, msg, ai);
 	bind(dataListenSock, ai->ai_addr, ai->ai_addrlen);
 	listen(dataListenSock, 1);
@@ -38,9 +41,12 @@ void waitDataConnect(LPVOID lpParam)
 		std::cout << "Error!\n";
 		return;
 	}
+	// 读取响应
 	recv(dataConnectSock, data, 1024, 0);
 	std::cout << "Success Data Connect!\nResponse: " << data << "\n";
 }
+
+// 读取命令专用线程
 void ReadServerResponse(LPVOID lpParam)
 {
 	char outBuf[1024] = { 0 };
@@ -60,6 +66,8 @@ void ReadServerResponse(LPVOID lpParam)
 		}
 	}
 }
+
+// put命令对应的方法
 int putFile(const char* fileName)
 {
 	TCHAR wFileName[1024] = { 0 };
@@ -71,9 +79,10 @@ int putFile(const char* fileName)
 	}
 	char readFileBuf[READBUFSIZE];
 	DWORD readNumber = 0;
-
+	long readCount = 0;
 	do
 	{
+		readCount++;
 		if (!ReadFile(hUploadFile, readFileBuf, READBUFSIZE, &readNumber, NULL))
 		{
 			std::cout << "Read Faild!\n";
@@ -90,9 +99,14 @@ int putFile(const char* fileName)
 		/*std::cout << "我发送了" << readNumber << "个字节\n";*/
 	} while (readNumber > 0);
 	std::cout << "传输完成\n";
+	// 等待一段时间发送，基础5秒，防止TCP粘包
+	Sleep(5000 + (readCount / 1024) * 1000);
+	send(dataConnectSock, endFlag, strlen(endFlag), 0);
 	CloseHandle(hUploadFile);
 	return 0;
 }
+
+// get命令方法
 int getFile(const char* fileName)
 {
 	FD_SET(dataConnectSock, &sSet);
@@ -106,9 +120,20 @@ int getFile(const char* fileName)
 	{
 		return FILE_HANDLE_ERROR;
 	}
+	/* 标志位用来读取每个数据报文的前14个字节
+	在该示例程序中只在最后一个报文中加入标志信息
+	在实际传输中应该为每个报文段加入头部标志位
+	*/
+	char flagBit[16] = { 0 };
 	do
 	{
 		readNumber = recv(dataConnectSock, readBuf, READBUFSIZE, 0);
+		// 如果文件特别小，数据报文可能不足15字节
+		if (readNumber >= 15)
+		{
+			CopyMemory(flagBit, readBuf, 15);
+			if (strcmp(flagBit, endFlag) == 0)  break;
+		}
 		if (readNumber == SOCKET_ERROR)
 		{
 			return DATA_SOCKET_ERROR;
@@ -118,12 +143,14 @@ int getFile(const char* fileName)
 			std::cout << "Writr faild\n";
 			return WRITE_OR_READ_ERROR;
 		}
-		/*std::cout << "写入文件" << writeNumber << "个字节\n";*/
-	} while (readNumber >= READBUFSIZE);
+		// std::cout << "写入文件" << writeNumber << "个字节\n";
+	} while (readNumber > 0);
 	std::cout << "传输完成\n";
 	CloseHandle(hGetFile);
 	return 0;
 }
+
+// 将命令结合成为控制报文
 void CombineMessage(int argc, char* args[], char* message)
 {
 	int len = 0;
@@ -136,21 +163,33 @@ void CombineMessage(int argc, char* args[], char* message)
 		point += len + INTSIZE;
 	}
 }
+
+// 初始化结束报文
+void initEndMessage(char* buf)
+{
+	endFlag[0] = 'e'; endFlag[1] = 'n'; endFlag[2] = 'd';
+	for (int i = 3; i < 15; i++)
+	{
+		endFlag[i] = '1';
+	}
+}
 int main()
 {
 	FD_ZERO(&sSet);
-	
+	initEndMessage(endFlag);
+
 	addrinfo *ai;
 	char host[12] = { 0 }, msg[] = "9000";
 	int retCode = 0;
 	std::cout << "请输入要连接的服务器IP:>";
 	std::cin >> host;
+	// 创建socket
 	retCode = MySocketUtils::SocketFactory::GetClientSocket(client, host, "8080", ai);
 	if (retCode < 0)
 	{
 		return retCode;
 	}
-
+	// 连接服务
 	retCode = connect(client, ai->ai_addr, ai->ai_addrlen);
 	if (retCode == SOCKET_ERROR)
 	{
@@ -161,11 +200,16 @@ int main()
 		return -1;
 	}
 	FD_SET(client, &sSet);
+
+	// 等待连接线程
 	HANDLE hDataThread = CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)waitDataConnect, msg, NULL, NULL);
+
+	// 读取服务响应线程
 	HANDLE hReadThread = CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)ReadServerResponse, &client, NULL, NULL);
+
 	WaitForSingleObject(hDataThread, INFINITE);
+
 	// 传输指令
-	
 	while (true)
 	{
 		if (dataConnectSock == INVALID_SOCKET)
@@ -186,7 +230,7 @@ int main()
 		cmdLine[2] = fileArg2;
 
 		getchar();
-		// 生成报文缓冲
+		// 生成控制报文
 		CombineMessage(3, cmdLine, message);
 		// 发送报文
 		int s = sizeof(message);
@@ -196,7 +240,7 @@ int main()
 			break;
 		}
 		//根据命令类型进行处理
-		if (strcmp("put", cmd) == 0)
+		if (strcmp(SMFTP_PUT, cmd) == 0)
 		{
 			std::cout << "开始上传\n";
 		

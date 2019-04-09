@@ -2,7 +2,7 @@
 
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN // 删除一些头文件
 #include "pch.h"
 #include <windows.h>
 #include <iostream>
@@ -11,7 +11,9 @@
 #include "SocketUtils.h"
 #include <tchar.h>
 #include "SMFTPUI.h"
-
+#define SMFTP_PUT "put"
+#define SMFTP_GET "get"
+#define SMFTP_EXIT "ext"
 
 
 #define BUFSIZE 1024
@@ -20,6 +22,7 @@
 #define INTSIZE 4
 SOCKET sock;
 char OK_STATUS[] = "OK!";
+char endFlag[16] = { 0 };
 char CLOSE_MESSAGE[] = "连接已关闭";
 
 #pragma comment(lib, "Ws2_32.lib")
@@ -35,8 +38,9 @@ typedef struct ConnectInfo
 {
 	SOCKET s;
 	sockaddr_in sa;
-}*pConnectInfo;
+}*PConnectInfo;
 
+// 解析控制报文
 void parseMessage(int argc, char* args[], const char* message)
 {
 	int len = 0, point = 0;
@@ -48,6 +52,7 @@ void parseMessage(int argc, char* args[], const char* message)
 	}
 }
 
+// 处理put命令
 int HandPutCMD(int argc, char* args[], const SOCKET &s)
 {
 	if (s == INVALID_SOCKET)
@@ -67,36 +72,59 @@ int HandPutCMD(int argc, char* args[], const SOCKET &s)
 	char readFileBuf[BUFSIZE];
 	int readNumber = 0;
 	DWORD writeNumber = 0;
+	/* 标志位用来读取每个数据报文的前14个字节
+	在该示例程序中只在最后一个报文中加入标志信息
+	在实际传输中应该为每个报文段加入头部标志位
+	*/
+	char flagBit[16] = { 0 };
+	
 	do
 	{
+		
 		readNumber = recv(s, readFileBuf, BUFSIZE, 0);
+		// std::cout << "读取了" << readNumber << "字节\n" << readFileBuf << "\n";
+		if (readNumber == 15)
+		{
+			CopyMemory(flagBit, readFileBuf, 15);
+			std::cout << endFlag << "\n" << flagBit << "\n";
+			if (strcmp(endFlag, flagBit) == 0) break;
+		}
+		
 		if (!WriteFile(hUploadFile, readFileBuf, readNumber, &writeNumber, NULL))
 		{
 			std::cout << "WriteFile faild\n";
 			return WRITE_OR_READ_ERROR;
 		}
-	} while (readNumber >= BUFSIZE);
+	} while (readNumber > 0);
 	std::cout << "传输完成\n";
+
 	CloseHandle(hUploadFile);
 	return 0;
 }
+
+// 处理get命令
 int HandGetCMD(int argc, char* args[], const SOCKET &s)
 {
 	char readBuf[BUFSIZE] = { 0 };
 	DWORD readNumber = 0;
 	HANDLE hGetFile = CreateFileA(args[1], GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_ALWAYS, NULL, NULL);
+	printf("get文件名%s\n", args[1]);
 	if (hGetFile == INVALID_HANDLE_VALUE)
 	{
 		std::cout << "FILE_HANDLE_ERROR\n";
 		return FILE_HANDLE_ERROR;
 	}
+	// std::cout << GetLastError() << "\n";
+	long readCount = 0;
 	do
 	{
+		readCount++;
 		if (!ReadFile(hGetFile, readBuf, BUFSIZE, &readNumber, NULL))
 		{
 			std::cout << "WRITE_OR_READ_ERROR\n";
 			return WRITE_OR_READ_ERROR;
 		}
+		// std::cout << "read bytes: " << readNumber << "\n";
 		if (readNumber == 0)
 		{
 			std::cout << "读取完成\n";
@@ -108,6 +136,9 @@ int HandGetCMD(int argc, char* args[], const SOCKET &s)
 			return DATA_SOCKET_ERROR;
 		}
 	} while (readNumber > 0);
+	// 发送结束标志 等待一段时间发送，基础5秒，防止TCP粘包
+	Sleep(5000 + (readCount / 1024) * 1000);
+	send(s, endFlag, strlen(endFlag), 0);
 	std::cout << "传输完成\n";
 	CloseHandle(hGetFile);
 	return 0;
@@ -118,31 +149,32 @@ int HandGetCMD(int argc, char* args[], const SOCKET &s)
 void WorkThreadFun(LPVOID lpParam)
 {
 	char readBuf[BUFSIZE];
-	pConnectInfo ci = (pConnectInfo)lpParam;
+	PConnectInfo ci = (PConnectInfo)lpParam;
 	SOCKET clientSock = ci->s, dataSock = INVALID_SOCKET;
 	TCHAR fromIp[IPLEN];
 	memset(fromIp, 0, IPLEN);
+	// 网络字节序转换成点分十进制字符串
 	InetNtop(AF_INET, &((ci->sa).sin_addr), fromIp, IPLEN);
 	_tprintf(L"Connect is come! Client address is: %s:%d \n", fromIp, ntohs((ci->sa).sin_port));
 
-	// std::cout << clientAddr.sa_data << "\n";
-	DWORD readByteNumber = 0, readCount = 0, writeByteNumber = 0;
+	
+	DWORD readByteNumber = 0, writeByteNumber = 0;
+	BOOL bFirstRead = TRUE; // 该值用来判断是否为端口报文
 	char *fixName;
 	HANDLE hFile = INVALID_HANDLE_VALUE;
 	addrinfo *clientAddrResult;
 	do
 	{
-		readCount++;
-		readByteNumber = recv(clientSock, readBuf, BUFSIZE, 0);
+		readByteNumber = recv(clientSock, readBuf, BUFSIZE, 0); // 读取客户端数据
 		if (readByteNumber <= 0 || readByteNumber == SOCKET_ERROR)
 		{
 			break;
 		}
 		// 这将是一个建立数据连接的指令，要从中读取出远程端口，然后建立数据连接
-		if (readCount == 1)
+		if (bFirstRead)
 		{
-
-			fixName = readBuf;
+			bFirstRead = FALSE;
+			
 			std::stringstream ostr;
 			ostr << readBuf;
 			int port;
@@ -157,7 +189,7 @@ void WorkThreadFun(LPVOID lpParam)
 				MySocketUtils::SocketFactory::GetClientSocket(dataSock, cFromIp, readBuf, clientAddrResult);
 				if (connect(dataSock, clientAddrResult->ai_addr, clientAddrResult->ai_addrlen) != SOCKET_ERROR)
 				{
-					send(dataSock, OK_STATUS, strlen(OK_STATUS), 0);
+					send(dataSock, OK_STATUS, strlen(OK_STATUS), 0); // 发送OK报文
 				}
 			}
 			else
@@ -183,29 +215,29 @@ void WorkThreadFun(LPVOID lpParam)
 				args[i] = new char[1024];
 				memset(args[i], 0, 1024);
 			}
-			parseMessage(3, args, readBuf);
+			parseMessage(3, args, readBuf); // 解析报文将参数放入args数组
 			CopyMemory(cmd, args[0], sizeof(args[0]));
 			CopyMemory(fileArg, args[1], sizeof(args[1]));
 			CopyMemory(fileArg2, args[2], sizeof(args[2]));
-			
-			if (strcmp("put", cmd) == 0)
+			// 处理不同的命令
+			if (strcmp(SMFTP_PUT, cmd) == 0)
 			{
 				std::cout << readBuf << "\n";
-				std::cout << "开始上传文件\n";
+				std::cout << "开始接收文件\n";
 				if (HandPutCMD(3, args, dataSock) != 0)
 				{
 					break;
 				}
 			}
-			else if (strcmp("get", cmd) == 0)
+			else if (strcmp(SMFTP_GET, cmd) == 0)
 			{
-				std::cout << "开始下载文件\n";
+				std::cout << "开始传送文件\n";
 				if (HandGetCMD(3, args, dataSock) != 0)
 				{
 					break;
 				}
 			}
-			else if (strcmp("ext", cmd) == 0)
+			else if (strcmp(SMFTP_EXIT, cmd) == 0)
 			{
 				std::cout << "关闭和客户端" << fromIp << "的连接\n";
 				break;
@@ -229,14 +261,26 @@ void WorkThreadFun(LPVOID lpParam)
 	closesocket(dataSock);
 }
 
+// 初始化结束报文
+void initEndMessage(char* buf)
+{
+	
+	endFlag[0] = 'e'; endFlag[1] = 'n'; endFlag[2] = 'd';
+	for (int i = 3; i < 15; i++)
+	{
+		endFlag[i] = '1';
+
+	}
+}
 int main()
 {
 	print_UI_Welcome();
 	printf("Start up...");
-	
+	initEndMessage(endFlag);
 	
 	addrinfo *addrResult = NULL;
 	
+	// 获取socket
 	int retCode = MySocketUtils::SocketFactory::GetSocket(sock, "8080", addrResult);
 	
 	retCode = bind(sock, addrResult->ai_addr, addrResult->ai_addrlen);
@@ -266,7 +310,9 @@ int main()
 			printf("Error connect\n");
 			continue;
 		}
-		pConnectInfo pCi = (pConnectInfo)malloc(sizeof(ConnectInfo));
+
+		// 创建一个结构体向工作线程传递参数
+		PConnectInfo pCi = (PConnectInfo)malloc(sizeof(ConnectInfo));
 		pCi->s = clientSock;
 		pCi->sa = clientAddr;
 		CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)WorkThreadFun, (LPVOID)pCi, 0, NULL);
