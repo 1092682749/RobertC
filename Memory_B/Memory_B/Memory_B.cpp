@@ -11,6 +11,7 @@ enum OPTION_TYPE
 	OPEN = 1,
 	READ,
 	WRITE,
+	UNMAP,
 	EXIT,
 };
 
@@ -51,14 +52,28 @@ int main()
 		case READ:
 			printf("%s\n", baseAddress);
 			break;
-		case EXIT:
+		case UNMAP:
 			if (baseAddress != NULL)
 			{
 				UnmapViewOfFile(baseAddress);
+				baseAddress = NULL;
 			}
 			if (hFileMapping != NULL)
 			{
 				CloseHandle(hFileMapping);
+				hFileMapping = NULL;
+			}
+			break;
+		case EXIT:
+			if (baseAddress != NULL)
+			{
+				UnmapViewOfFile(baseAddress);
+				baseAddress = NULL;
+			}
+			if (hFileMapping != NULL)
+			{
+				CloseHandle(hFileMapping);
+				hFileMapping = NULL;
 			}
 			return 0;
 		default:

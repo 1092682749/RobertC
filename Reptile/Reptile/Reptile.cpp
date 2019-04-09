@@ -77,15 +77,17 @@ void DownImage(const char* imgUrl, const char* name)
 	path.append(name);
 	char readBuf[1024] = { 0 };
 	DWORD readNumber = 0;
+	// 打开url，其本质为发送一个get请求
 	HANDLE hOpenUrl = InternetOpenUrlA(hRoot, imgUrl, NULL, NULL, 0, 0);
 
 
 
 	DWORD Len = 10240, ContentLength = 0, downSum = 0;
+	// 获取实体体长度
 	HttpQueryInfo(hOpenUrl, HTTP_QUERY_CONTENT_LENGTH | HTTP_QUERY_FLAG_NUMBER, &ContentLength, &Len, NULL);
 	
 
-
+	// 在本地创建文件
 	HANDLE hFile = CreateFileA(path.data(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE)
 	{
@@ -102,9 +104,10 @@ void DownImage(const char* imgUrl, const char* name)
 		}
 
 		downSum += readNumber;
+		// 计算下载比例
 		float percentage = (float)downSum / ContentLength * 100;
-		std::cout << "\r" << name << "已下载%" << ceil(percentage);
-		
+		std::cout << "\r" << name << "已下载" << ceil(percentage) << "%";
+		// 写入内容
 		WriteFile(hFile, readBuf, readNumber, NULL, NULL);
 	} while (readNumber > 0);
 	
@@ -112,7 +115,9 @@ void DownImage(const char* imgUrl, const char* name)
 int main()
 {
 	std::string content;
+	// 获取html文本
 	content = GetHtml(L"www.bilibili.com");
+	// 找到其中的图片链接
 	std::regex imgRegex("(ht|f)tp(s?)\\://([-A-Za-z0-9+&@#/%?=~_|!:,.;]*?(jpg|jpeg|gif|png))");
 	std::smatch result;
 	std::cout << "开始下载文件:\n";
@@ -120,8 +125,8 @@ int main()
 	{
 		std::string url = result[0];
 		std::string fullName = result[3];
-		int poi = fullName.find_last_of('/');
-		DownImage(url.data(), fullName.substr(poi + 1).data());
+		int poi = fullName.find_last_of('/'); // 找到文件名的位置
+		DownImage(url.data(), fullName.substr(poi + 1).data()); // 下载
 		std::cout << "\n";
 		content = result.suffix().str();
 	}

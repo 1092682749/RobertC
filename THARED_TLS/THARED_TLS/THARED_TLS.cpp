@@ -9,12 +9,14 @@
 DWORD thread_name;
 HANDLE hThreadEvent;
 HANDLE hMainEvents[THREADCOUNT];
+char nameArr[3][10] = { "one", "tow", "three" };
 
 void ThreadFun(LPVOID lpParam)
 {
 	int i = *(int*)lpParam;
-	char name[10] = "I am ";
-	name[6] = i + (1 - '1');
+	
+	char *name = nameArr[i];
+	
 	if (!TlsSetValue(thread_name, name))
 	{
 		std::cout << "设置线程本地存储失败\n";
@@ -23,8 +25,9 @@ void ThreadFun(LPVOID lpParam)
 	//char *getName = (char*)TlsGetValue(thread_name);
 	//std::cout << "我是线程" << i << "我已经准备好了\n";
 	//SetEvent(hMainEvents[i]);
-	//WaitForSingleObject(hThreadEvent, INFINITE);
+	WaitForSingleObject(hThreadEvent, INFINITE);
 	std::cout << "我是线程" << i << "name是：" << (char*)TlsGetValue(thread_name) << "\n";
+	SetEvent(hThreadEvent);
 }
 int main()
 {
@@ -32,7 +35,7 @@ int main()
 	HANDLE hThreads[THREADCOUNT];
 	
 	
-	hThreadEvent = CreateEvent(NULL, TRUE, FALSE, L"TE");
+	hThreadEvent = CreateMutex(NULL, FALSE, TEXT("MUTEX"));
 	for (int i = 0; i < THREADCOUNT; i++)
 	{
 		hMainEvents[i] = CreateEvent(NULL, TRUE, FALSE, L"ME");

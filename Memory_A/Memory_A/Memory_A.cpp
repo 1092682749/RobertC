@@ -39,13 +39,16 @@ int main()
 			std::cout << "请输入文件名:";
 			std::cin >> fileName;
 			MultiByteToWideChar(CP_UTF8, 0, fileName, strlen(fileName), wFileName, 1024);
+			// 打开文件句柄
 			hFile = CreateFile(wFileName, GENERIC_WRITE | GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_ALWAYS, NULL, NULL);
+			// 创建文件映射对象
 			hFileMapping = CreateFileMapping(hFile, NULL, PAGE_READWRITE, 0, 0, SHARE_SPACE_NAME);
 			if (hFileMapping == NULL)
 			{
 				std::cout << GetLastError() << "\n";
 				return -2;
 			}
+			// 创建文件映射视图
 			baseAddress = MapViewOfFile(hFileMapping, FILE_MAP_WRITE, 0, 0, 0);
 			if (baseAddress == NULL)
 			{
@@ -90,13 +93,15 @@ int main()
 			break;
 		}
 		case UNMAP:
-			if (baseAddress != NULL)
-			{
-				UnmapViewOfFile(baseAddress);
-			}
 			if (hFileMapping != NULL)
 			{
 				CloseHandle(hFileMapping);
+				hFileMapping = NULL;
+			}
+			if (baseAddress != NULL)
+			{
+				UnmapViewOfFile(baseAddress);
+				baseAddress = NULL;
 			}
 			break;
 		case EXIT:
@@ -107,6 +112,7 @@ int main()
 			if (hFileMapping != NULL)
 			{
 				CloseHandle(hFileMapping);
+				hFileMapping = NULL;
 			}
 			return 0;
 		default:
@@ -114,32 +120,5 @@ int main()
 			break;
 		}
 	}
-
-
-
-
-
-	/*HANDLE hFile = CreateFile(L"D:/a/to.txt", GENERIC_WRITE | GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_ALWAYS, NULL, NULL);
-	if (hFile == INVALID_HANDLE_VALUE)
-	{
-		return -1;
-	}
-	HANDLE hFileMaping = CreateFileMapping(hFile, NULL, PAGE_READWRITE, 0, 0, SHARE_SPACE_NAME);
-	if (hFileMaping == NULL)
-	{
-		std::cout << GetLastError() << "\n";
-		return -2;
-	}
-	LPVOID baseAddress = MapViewOfFile(hFileMaping, FILE_MAP_WRITE, 0, 0, 0);
-	if (baseAddress == NULL)
-	{
-		std::cout << GetLastError() << "\n";
-		return -3;
-	}
-	*/
-	//std::cin >> input;
-	//CopyMemory(baseAddress, input, strlen(input));
-	//UnmapViewOfFile(baseAddress);
-	//CloseHandle(hFileMaping);
 	return 0;
 }

@@ -11,7 +11,7 @@
 HANDLE ghMutex;
 char criticalDataBuf[1024] = { 0 };
 char pc[] = { 'a', 'b', 'c', 'd', 'e' };
-int pointPosition = 0;
+volatile int pointPosition = 0;
 
 // 使用同步的线程函数
 void ThreadFun(LPVOID lpParam)
@@ -22,6 +22,7 @@ void ThreadFun(LPVOID lpParam)
 	std::cout << "对应的字符是:" << pc[pointPosition] << "\n";
 	switch (resCode)
 	{
+		
 	case WAIT_OBJECT_0:
 		for (int i = 0; i < 100; i++)
 		{
@@ -73,7 +74,7 @@ int main()
 		// 使用Mutex同步的线程
 		 hThreadArr[i] = CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)ThreadFun, NULL, 0, &TIDs[i]);
 		 // 未同步的线程
-		//hThreadArr[i] = CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)NoSyncThreadFun, NULL, 0, &TIDs[i]);
+		// hThreadArr[i] = CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)NoSyncThreadFun, NULL, 0, &TIDs[i]);
 		if (hThreadArr[i] == NULL)
 		{
 			std::cout << "创建线程失败\n";
