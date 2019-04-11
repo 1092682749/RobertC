@@ -52,11 +52,57 @@ void* MALLOC(int size) {
 	}
 	return createSpace->address;
 }
+void t(char arr[]) {
+	std::cout << sizeof(arr);
+}
+/*
+	内存对齐：数据的起始地址为本身长度的整数倍，结构体长度为最大数据类型的整数倍；
+*/
+struct worker
+
+{
+	int no;
+
+	char name[20];
+
+	char sex;
+
+	union
+
+	{
+		int day;  int month;  int year;
+	}birth;
+
+} w;
+struct A {
+	int a, ac;
+	double c;
+	char b;
+}aa;
+struct B {
+	double c;
+	char a;
+	int b;
+	char d;
+}bb;
 int main()
 {
-	/*char arr[] = "aaaaaa";
+	// std::cout << sizeof(double);
+	std::cout << sizeof(aa) << "\t" << sizeof(bb) << "\n";
+	printf("%p\n", &aa.a);
+	printf("%p\n", &aa.ac);
+	printf("%p\n", &aa.c);
+	printf("%p\n", &aa.b);
+	printf("%p\n", &bb.c);
+	//printf("%p\n", &bb.ac);
+	printf("%p\n", &bb.a);
+	printf("%p\n", &bb.b);
+	std::cout << sizeof(worker);
+
+	char arr[] = "aaaaaa";
 	char *pa = arr;
-	std::cout << sizeof(*pa);*/
+	std::cout << sizeof(arr);
+	t(arr);
 	char *cs = (char*)MALLOC(10);
 	char *cs2 = (char*)MALLOC(10);
 	for (int i = 0; i < 10; i++)
