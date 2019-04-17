@@ -23,6 +23,7 @@ void* MALLOC(int size) {
 	{
 		HANDLE hHeap = GetProcessHeap();
 		heapHead = HeapAlloc(hHeap, HEAP_ZERO_MEMORY, HEAPSIZE);
+
 		heapEnd = (LPVOID)((char*)heapHead + HEAPSIZE);
 	}
 	
@@ -47,7 +48,11 @@ void* MALLOC(int size) {
 			currentMBC = currentMBC->next;
 		}
 		createSpace->address = (LPVOID)((char* )currentMBC->address + currentMBC->size);
-		
+		if (createSpace->address >= heapEnd)
+		{
+			std::cout << "内存不足无法分配\n";
+			return NULL;
+		}
 		currentMBC->next = createSpace;
 	}
 	return createSpace->address;

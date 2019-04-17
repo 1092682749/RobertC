@@ -8,8 +8,27 @@
 
 #pragma comment(lib, "Ws2_32.lib")
 
+class A {
+	int value;
+public:
+	A(int v)
+	{
+		this->value = v;
+	}
+	int getA() const
+	{
+		return value;
+	}
+	A operator+(const A &a)
+	{
+		return (this->value + a.getA());
+	}
+};
 int main()
 {
+	A a(1), b(2);
+	A c = a + b;
+	std::cout << c.getA();
 	WSAData wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 	addrinfo hint, *result;

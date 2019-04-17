@@ -7,6 +7,7 @@
 #include <iostream>
 
 #pragma comment(lib, "Ws2_32.lib")
+
 int main()
 {
 	int retCode = 0;
@@ -22,14 +23,15 @@ int main()
 	SOCKET conSock = socket(result->ai_flags, result->ai_socktype, result->ai_protocol);
 	if (conSock == SOCKET_ERROR)
 	{
-		std::cout << GetLastError();
+		std::cout << GetLastError() << "\n";
 	}
 	connect(conSock, result->ai_addr, result->ai_addrlen);
-	std::cout << GetLastError();
+	// std::cout << GetLastError();
 	char outBuf[1024] = { 0 };
 	char readBuf[1024] = { 0 };
 	while (true)
 	{
+		std::cout << "请输入要发送的数据\n";
 		std::cin >> outBuf;
 		send(conSock, outBuf, strlen(outBuf), 0);
 		recv(conSock, readBuf, 1024, 0);

@@ -98,10 +98,12 @@ int putFile(const char* fileName)
 		}
 		/*std::cout << "我发送了" << readNumber << "个字节\n";*/
 	} while (readNumber > 0);
-	std::cout << "传输完成\n";
 	// 等待一段时间发送，基础5秒，防止TCP粘包
-	Sleep(5000 + (readCount / 1024) * 1000);
+	long sleepTime = 5000 + (readCount / 1024) * 500;
+	std::cout << "Delayed " << sleepTime << "ms send end message\n";
+	Sleep(sleepTime);
 	send(dataConnectSock, endFlag, strlen(endFlag), 0);
+	std::cout << "Transmission complete\n";
 	CloseHandle(hUploadFile);
 	return 0;
 }
@@ -145,7 +147,7 @@ int getFile(const char* fileName)
 		}
 		// std::cout << "写入文件" << writeNumber << "个字节\n";
 	} while (readNumber > 0);
-	std::cout << "传输完成\n";
+	std::cout << "Transmission complete\n";
 	CloseHandle(hGetFile);
 	return 0;
 }
@@ -181,7 +183,7 @@ int main()
 	addrinfo *ai;
 	char host[12] = { 0 }, msg[] = "9000";
 	int retCode = 0;
-	std::cout << "请输入要连接的服务器IP:>";
+	std::cout << "Please enter server IP:>";
 	std::cin >> host;
 	// 创建socket
 	retCode = MySocketUtils::SocketFactory::GetClientSocket(client, host, "8080", ai);
@@ -214,7 +216,7 @@ int main()
 	{
 		if (dataConnectSock == INVALID_SOCKET)
 		{
-			std::cout << "数据连接建立失败！\n";
+			std::cout << "Failed to create data connection!\n";
 			break;
 		}
 		std::cout << "smftp>";
@@ -242,7 +244,7 @@ int main()
 		//根据命令类型进行处理
 		if (strcmp(SMFTP_PUT, cmd) == 0)
 		{
-			std::cout << "开始上传\n";
+			std::cout << "Uploading\n";
 		
 			if (putFile(fileArg) != 0)
 			{
@@ -252,7 +254,7 @@ int main()
 		}
 		else if (strcmp(SMFTP_GET, cmd) == 0)
 		{
-			std::cout << "开始下载\n";
+			std::cout << "Downloading\n";
 			if (getFile(fileArg2) != 0)
 			{
 				break;
@@ -260,7 +262,7 @@ int main()
 		}
 		else if (strcmp(SMFTP_EXIT, cmd) == 0)
 		{
-			std::cout << "程序即将退出\n";
+			std::cout << "Program end\n";
 			break;
 		}
 	}
