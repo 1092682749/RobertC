@@ -9,7 +9,7 @@
 #pragma comment(lib, "Ws2_32.lib")
 
 int clientCount = 0;
-SOCKET clientSockArr[10];
+SOCKET clientSockArr[10] = { INVALID_SOCKET };
 FD_SET fdReadSet;
 char refuseBuf[] = "Server queue is full";
 
@@ -17,34 +17,44 @@ void RecvThread(LPVOID lpParam)
 {
 	while (true)
 	{
-		if (clientCount <= 0)
-		{
-			continue;
-		}
 		FD_ZERO(&fdReadSet);
 		timeval val{ 2, 0 };
-
+		// 找到所有的有效socket
 		for (int i = 0; i < clientCount; i++)
 		{
 			if (clientSockArr[i] == INVALID_SOCKET)
 			{
-				std::cout << "arr element invalid\n";
+				// std::cout << "arr element invalid\n";
 				continue;
 			}
+			// 放入fd_set
 			FD_SET(clientSockArr[i], &fdReadSet);
-			std::cout << "get error " << GetLastError() << "\n";
 		}
+
+		// select会把fd_set里的不可读写的fd清除，留下可读写的
 		int ready = select(0, &fdReadSet, NULL, NULL, &val);
-		std::cout << "wsa error: " << WSAGetLastError() << "\n";
-		std::cout << ready << "\n";
+
+		//std::cout << ready << "\n";
 		for (int i = 0; i < clientCount; i++)
 		{
+			if (clientSockArr[i] == INVALID_SOCKET)
+			{
+				// std::cout << "arr element invalid\n";
+				continue;
+			}
+			// 判断该套接字是否还在set里，换句话说就是是否可读
 			int isset = FD_ISSET(clientSockArr[i], &fdReadSet) > 0;
-			std::cout << "is set " << isset << "\n";
+			//std::cout << "is set " << isset << "\n";
 			if (isset > 0)
 			{
 				char readBuf[1024] = { 0 };
-				recv(clientSockArr[i], readBuf, 1024, 0);
+				int readNumber = recv(clientSockArr[i], readBuf, 1024, 0);
+				if (readNumber == 0 || WSAECONNRESET == WSAGetLastError()) // 说明连接已被关闭
+				{
+					closesocket(clientSockArr[i]);
+					clientSockArr[i] = INVALID_SOCKET;
+					continue;
+				}
 				printf("ssss%s\n", readBuf);
 			}
 		}
@@ -75,10 +85,10 @@ int main()
 
 	listen(serverSock, 10);
 	CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)RecvThread, NULL, 0, NULL);
+	bool have = true;
 	while (true)
 	{
 		SOCKET connectSock = accept(serverSock, NULL, NULL);
-		std::cout << "come";
 		if (connectSock == INVALID_SOCKET)
 		{
 			std::cout << "invalid socket \n";
@@ -86,11 +96,24 @@ int main()
 		}
 		if (clientCount >= 10)
 		{
+			
+		}
+		have = false;
+		// 遍历数组找到空位，如果没有空位就发送一个回复并关闭连接
+		for (int i = 0; i < 10; i++)
+		{
+			if (clientSockArr[i] == INVALID_SOCKET)
+			{
+				clientSockArr[i] = connectSock;
+				have = true;
+			}
+		}
+		if (!have)
+		{
 			send(connectSock, refuseBuf, strlen(refuseBuf), 0);
+			closesocket(connectSock);
 			continue;
 		}
-		clientSockArr[clientCount] = connectSock;
-		clientCount++;
 	}
 	return 0;
 }
