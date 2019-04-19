@@ -1,4 +1,4 @@
-// Read_Big_File_Client.cpp : This file contains the 'main' function. Program execution begins and ends there.
+﻿// Read_Big_File_Client.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
 #include "pch.h"

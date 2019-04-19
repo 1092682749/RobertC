@@ -101,3 +101,7 @@ JSON_TEST/JSON_TEST/Debug/
 SO_REUSE_TEST/SO_REUSE_TEST/Debug/
 MY_KERNEL/Debug/
 MY_KERNEL/MY_KERNEL/Debug/
+SMFTP_Server/Read_Big_File/x64/Debug/
+SMFTP_Client/Read_Big_File_Client/x64/Debug/
+SMFTP_Server/x64/Debug/
+SMFTP_Client/x64/Debug/

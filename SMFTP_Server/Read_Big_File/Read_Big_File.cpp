@@ -1,10 +1,10 @@
-// Read_Big_File.cpp : This file contains the 'main' function. Program execution begins and ends there.
+﻿// Read_Big_File.cpp : This file contains the 'main' function. Program execution begins and ends there.
 
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN // 删除一些头文件
+//#define WIN32_LEAN_AND_MEAN // 删除一些头文件
 #include "pch.h"
-#include <windows.h>
+//#include <windows.h>
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -23,7 +23,7 @@
 SOCKET sock;
 char OK_STATUS[] = "OK!";
 char endFlag[16] = { 0 };
-char CLOSE_MESSAGE[] = "连接已关闭";
+char CLOSE_MESSAGE[] = "link close";
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -82,7 +82,7 @@ int HandPutCMD(int argc, char* args[], const SOCKET &s)
 	{
 		
 		readNumber = recv(s, readFileBuf, BUFSIZE, 0);
-		// std::cout << "读取了" << readNumber << "字节\n" << readFileBuf << "\n";
+		 std::cout << "读取了" << readNumber << "字节\n" << readFileBuf << "\n";
 		if (readNumber == 15)
 		{
 			CopyMemory(flagBit, readFileBuf, 15);
