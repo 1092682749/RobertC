@@ -1,16 +1,17 @@
-﻿// Read_Big_File.cpp : This file contains the 'main' function. Program execution begins and ends there.
+// Read_Big_File.cpp : This file contains the 'main' function. Program execution begins and ends there.
 
 #pragma once
 
-//#define WIN32_LEAN_AND_MEAN // 删除一些头文件
+#define WIN32_LEAN_AND_MEAN // 删除一些头文件
 #include "pch.h"
-//#include <windows.h>
+#include <windows.h>
 #include <iostream>
 #include <string>
 #include <sstream>
 #include "SocketUtils.h"
 #include <tchar.h>
 #include "SMFTPUI.h"
+
 #define SMFTP_PUT "put"
 #define SMFTP_GET "get"
 #define SMFTP_EXIT "ext"
@@ -23,7 +24,7 @@
 SOCKET sock;
 char OK_STATUS[] = "OK!";
 char endFlag[16] = { 0 };
-char CLOSE_MESSAGE[] = "link close";
+char CLOSE_MESSAGE[] = "Connection closed";
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -57,12 +58,12 @@ int HandPutCMD(int argc, char* args[], const SOCKET &s)
 {
 	if (s == INVALID_SOCKET)
 	{
-		std::cout << "该数据socket已经为无效\n";
+		std::cout << "Invalid socket\n";
 		return DATA_SOCKET_ERROR;
 	}
 	std::string str = SAVEPATH;
 	str.append(args[2]);
-	std::cout << args[2] << "\n";
+	std::cout << "put file name: " << args[2] << "\n";
 	HANDLE hUploadFile = CreateFileA(str.data(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hUploadFile == INVALID_HANDLE_VALUE)
 	{
@@ -82,11 +83,11 @@ int HandPutCMD(int argc, char* args[], const SOCKET &s)
 	{
 		
 		readNumber = recv(s, readFileBuf, BUFSIZE, 0);
-		 std::cout << "读取了" << readNumber << "字节\n" << readFileBuf << "\n";
+		// std::cout << "读取了" << readNumber << "字节\n" << readFileBuf << "\n";
 		if (readNumber == 15)
 		{
 			CopyMemory(flagBit, readFileBuf, 15);
-			std::cout << endFlag << "\n" << flagBit << "\n";
+			// std::cout << endFlag << "\n" << flagBit << "\n";
 			if (strcmp(endFlag, flagBit) == 0) break;
 		}
 		
@@ -96,7 +97,7 @@ int HandPutCMD(int argc, char* args[], const SOCKET &s)
 			return WRITE_OR_READ_ERROR;
 		}
 	} while (readNumber > 0);
-	std::cout << "传输完成\n";
+	std::cout << "Transmission complete\n";
 
 	CloseHandle(hUploadFile);
 	return 0;
@@ -108,7 +109,7 @@ int HandGetCMD(int argc, char* args[], const SOCKET &s)
 	char readBuf[BUFSIZE] = { 0 };
 	DWORD readNumber = 0;
 	HANDLE hGetFile = CreateFileA(args[1], GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_ALWAYS, NULL, NULL);
-	printf("get文件名%s\n", args[1]);
+	printf("get file name: %s\n", args[1]);
 	if (hGetFile == INVALID_HANDLE_VALUE)
 	{
 		std::cout << "FILE_HANDLE_ERROR\n";
@@ -127,7 +128,7 @@ int HandGetCMD(int argc, char* args[], const SOCKET &s)
 		// std::cout << "read bytes: " << readNumber << "\n";
 		if (readNumber == 0)
 		{
-			std::cout << "读取完成\n";
+			std::cout << "Read completion\n";
 			break;
 		}
 		if (send(s, readBuf, readNumber, 0) == SOCKET_ERROR)
@@ -137,9 +138,11 @@ int HandGetCMD(int argc, char* args[], const SOCKET &s)
 		}
 	} while (readNumber > 0);
 	// 发送结束标志 等待一段时间发送，基础5秒，防止TCP粘包
-	Sleep(5000 + (readCount / 1024) * 1000);
+	long sleepTime = 5000 + (readCount / 1024) * 500;
+	std::cout << "Delayed " << sleepTime << "ms send end message\n";
+	Sleep(sleepTime);
 	send(s, endFlag, strlen(endFlag), 0);
-	std::cout << "传输完成\n";
+	std::cout << "Transmission complete\n";
 	CloseHandle(hGetFile);
 	return 0;
 }
@@ -179,7 +182,7 @@ void WorkThreadFun(LPVOID lpParam)
 			ostr << readBuf;
 			int port;
 			ostr >> port;
-			printf("客户端待连PORT:%d\n", port);
+			printf("Client Open PORT:%d\n", port);
 			// 端口有效则连入客户端
 			if (port > 1024 && port < 10000)
 			{
@@ -194,7 +197,7 @@ void WorkThreadFun(LPVOID lpParam)
 			}
 			else
 			{
-				printf("无法解析客户端ip\n");
+				printf("Not a valid port number \n");
 				closesocket(dataSock);
 				closesocket(clientSock);
 				return;
@@ -206,9 +209,9 @@ void WorkThreadFun(LPVOID lpParam)
 		{
 			char cmd[1024] = { 0 };
 			char fileArg[200] = { 0 }, fileArg2[200] = { 0 };
-			std::string str = SAVEPATH;
-			str.append(readBuf);
-			std::cout << readBuf << "\n";
+			//std::string str = SAVEPATH;
+			//str.append(readBuf);
+			//std::cout << readBuf << "\n";
 			char* args[3];
 			for (int i = 0; i < 3; i++)
 			{
@@ -222,16 +225,16 @@ void WorkThreadFun(LPVOID lpParam)
 			// 处理不同的命令
 			if (strcmp(SMFTP_PUT, cmd) == 0)
 			{
-				std::cout << readBuf << "\n";
-				std::cout << "开始接收文件\n";
+				// std::cout << readBuf << "\n";
+				std::cout << "Receiving files\n";
 				if (HandPutCMD(3, args, dataSock) != 0)
-				{
+				{	
 					break;
 				}
 			}
 			else if (strcmp(SMFTP_GET, cmd) == 0)
 			{
-				std::cout << "开始传送文件\n";
+				std::cout << "Sending files\n";
 				if (HandGetCMD(3, args, dataSock) != 0)
 				{
 					break;
@@ -239,7 +242,7 @@ void WorkThreadFun(LPVOID lpParam)
 			}
 			else if (strcmp(SMFTP_EXIT, cmd) == 0)
 			{
-				std::cout << "关闭和客户端" << fromIp << "的连接\n";
+				std::cout << "Close the connection with the client" << fromIp << "\n";
 				break;
 			}
 			/*hFile = CreateFileA(str.data(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -269,7 +272,6 @@ void initEndMessage(char* buf)
 	for (int i = 3; i < 15; i++)
 	{
 		endFlag[i] = '1';
-
 	}
 }
 int main()
@@ -321,7 +323,7 @@ int main()
 	return 0;
 }
 /*
-	该协议(smftp)报文格式分为三段(Simple File Transfer Protocol)
+	该协议(smftp)控制报文格式分为三段(Simple File Transfer Protocol)
 	commendType:([int][string]) int类型的参数使用四个字节用来标识string长度；
 	filename1([int][string]) 参数类型意义同上
 	filename2([int][string]) 同上

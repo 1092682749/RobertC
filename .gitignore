@@ -101,7 +101,30 @@ JSON_TEST/JSON_TEST/Debug/
 SO_REUSE_TEST/SO_REUSE_TEST/Debug/
 MY_KERNEL/Debug/
 MY_KERNEL/MY_KERNEL/Debug/
+<<<<<<< .merge_file_a19364
 SMFTP_Server/Read_Big_File/x64/Debug/
 SMFTP_Client/Read_Big_File_Client/x64/Debug/
 SMFTP_Server/x64/Debug/
 SMFTP_Client/x64/Debug/
+=======
+req_res_test/Debug/
+req_res_test/req_res_test/Debug/
+req_res_textB/req_res_textB/Debug/
+ShootScanner/ShootScanner/Debug/
+DB_test/DB_test/Debug/
+MySql/
+new_mysql/
+new_mysql4/
+new_MySql2/
+new_mysql1/
+ShootScanner/Debug/
+SMFTP_Client/Read_Big_File_Client/.zip
+Test_Security_Descriptor/Debug/
+Test_Security_Descriptor/Test_Security_Descriptor/Debug/
+Select_IO_Server/Test_Security_Descriptor/Debug/Select_IO_Server.tlog/CL.command.1.tlog
+Select_IO_Server/Test_Security_Descriptor/Debug/
+Select_client/Select_client/Debug/
+Select_client/Debug/
+IOCP2/Debug/
+IOCP2/IOCP2/Debug/
+>>>>>>> .merge_file_a12444
