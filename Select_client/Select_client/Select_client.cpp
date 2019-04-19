@@ -23,10 +23,16 @@ int main()
 
 	SOCKET sock = socket(addrResult->ai_family, addrResult->ai_socktype, addrResult->ai_protocol);
 	connect(sock, addrResult->ai_addr, addrResult->ai_addrlen);
+	std::cout << "error " << GetLastError() << "\n";
 	char sendBuf[1024] = { 0 };
 	while (true) {
 		std::cin >> sendBuf;
 		int sendNum = send(sock, sendBuf, strlen(sendBuf), 0);
+		if (sendNum == -1)
+		{
+			std::cout << "last error: " << GetLastError() << "\n";
+		}
+		std::cout << "last error: " << GetLastError() << "\n";
 		std::cout << sendNum << "\n";
 	}
 	closesocket(sock);
