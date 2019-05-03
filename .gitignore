@@ -1,0 +1,15 @@
+Day4_socket/.vs/Day4_socket/v15/.suo
+*.vs/*
+*.db
+*.ipch
+*.suo
+*.log
+*.tlog
+*.pdb
+*.idb
+*.pch
+*.enc
+*.ilk
+*.exe
+*.obj
+*.opendb
